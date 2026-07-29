@@ -1,99 +1,130 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, View } from 'react-native';
 
+import { Button, Card, Screen, Sheet, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { colors } from '@/theme/tokens';
+import { celestialInfo } from '@/lib/celestial';
+import { useProfile } from '@/lib/hooks/useProfile';
+import { colors, spacing } from '@/theme/tokens';
 
-// Temporary signed-in landing. Proves auth + session persistence work.
-// Replaced by the real four-tab home (Home / Moments / Inbox / You) in Chunk D.
+// The home screen (PRD 10.4): a calm greeting, a Celestial Journey glance in
+// impact language, an activity glance, and the two big actions. The actions
+// are placeholders in Phase 0 — the raise-help + dispatch flows arrive in
+// Phase 2 — so tapping them opens a gentle "coming soon" sheet.
 export default function Home() {
-  const { session, signOut } = useAuth();
-  const [busy, setBusy] = useState(false);
+  const { session } = useAuth();
+  const { profile } = useProfile();
+  const [sheet, setSheet] = useState<null | 'need' | 'help'>(null);
 
-  async function onSignOut() {
-    setBusy(true);
-    try {
-      await signOut();
-    } catch {
-      Alert.alert('Could not sign out', 'Please try again.');
-    } finally {
-      setBusy(false);
-    }
-  }
+  const firstName =
+    profile?.display_name?.trim() ||
+    session?.user.email?.split('@')[0] ||
+    'friend';
+  const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
+  const uniqueHelps = profile?.unique_helps ?? 0;
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.body}>
-        <Text style={styles.title}>You're in 🎉</Text>
-        <Text style={styles.subtitle}>Signed in as</Text>
-        <Text style={styles.email}>{session?.user.email}</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.cardText}>
-            Auth works. Your session is saved securely on this device — close
-            the app and reopen; you'll still be here. The real home screen
-            arrives next.
+    <Screen>
+      <View style={styles.headerRow}>
+        <View style={{ flex: 1 }}>
+          <Text variant="small" tone="soft">
+            Hello,
+          </Text>
+          <Text variant="title" weight="extrabold" numberOfLines={1}>
+            {firstName}
           </Text>
         </View>
-
-        <Pressable
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-          onPress={onSignOut}
-          disabled={busy}
-          accessibilityRole="button"
-        >
-          <Text style={styles.buttonText}>
-            {busy ? 'Signing out…' : 'Sign out'}
-          </Text>
-        </Pressable>
       </View>
-    </SafeAreaView>
+
+      {/* Celestial Journey glance — the night surface, impact language. */}
+      <Card tone="night" style={styles.journeyCard}>
+        <View style={styles.journeyRow}>
+          <View style={styles.stageBadge}>
+            <Ionicons name={stage.icon} size={26} color={colors.paper} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="small" style={{ color: colors.paperEdge }}>
+              Your journey
+            </Text>
+            <Text variant="heading" weight="bold" style={{ color: colors.cloud }}>
+              {stage.label}
+            </Text>
+          </View>
+        </View>
+        <Text variant="body" style={{ color: colors.paperEdge }}>
+          {uniqueHelps === 0
+            ? "You've reached no neighbours yet — your first help lights the way."
+            : `You've reached ${uniqueHelps} ${uniqueHelps === 1 ? 'neighbour' : 'neighbours'}.`}
+        </Text>
+      </Card>
+
+      {/* Activity glance (aggregate; real counts arrive with the engine). */}
+      <View style={styles.activityRow}>
+        <Ionicons name="people-outline" size={18} color={colors.inkSoft} />
+        <Text variant="small" tone="soft">
+          No helps near you yet this week
+        </Text>
+      </View>
+
+      {/* The two big actions. */}
+      <View style={styles.actions}>
+        <Tile
+          label="I need help"
+          hint="Ask a verified neighbour nearby"
+          icon="hand-left-outline"
+          variant="filled"
+          onPress={() => setSheet('need')}
+        />
+        <Tile
+          label="Help someone"
+          hint="See who needs a hand"
+          icon="heart-outline"
+          onPress={() => setSheet('help')}
+        />
+      </View>
+
+      <Sheet
+        visible={sheet !== null}
+        onClose={() => setSheet(null)}
+        title={sheet === 'need' ? 'Ask for help' : 'Help someone'}
+      >
+        <Text variant="body" tone="soft">
+          {sheet === 'need'
+            ? 'This is where you’ll raise a request in three taps — pick what you need, say when, and nearby verified helpers get pinged.'
+            : 'This is where you’ll see nearby people who need a hand and offer to help.'}
+        </Text>
+        <Text variant="small" tone="faint">
+          Coming in the next build phase.
+        </Text>
+        <Button label="Got it" onPress={() => setSheet(null)} />
+      </Sheet>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
-  body: {
-    flex: 1,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  journeyCard: { gap: spacing.lg },
+  journeyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  stageBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
-    gap: 10,
   },
-  title: { fontSize: 32, fontWeight: '800', color: colors.ink },
-  subtitle: { fontSize: 15, color: colors.inkSoft, marginTop: 8 },
-  email: { fontSize: 18, fontWeight: '700', color: colors.ink },
-  card: {
-    marginTop: 20,
-    backgroundColor: colors.cloud,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#EDE6DA',
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
   },
-  cardText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: colors.ink,
-    textAlign: 'center',
-  },
-  button: {
-    marginTop: 28,
-    borderWidth: 1.5,
-    borderColor: colors.spark,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  pressed: { opacity: 0.7 },
-  buttonText: { color: colors.spark, fontSize: 17, fontWeight: '700' },
+  actions: { gap: spacing.lg },
 });
