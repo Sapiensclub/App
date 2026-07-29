@@ -6,13 +6,15 @@ import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import { useProfile } from '@/lib/hooks/useProfile';
-import { colors, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 // The "You" tab (PRD 10.11). Phase 0 shows the essentials that already exist:
 // name/email, verification state, and the Celestial stage. The full profile
 // (photo, three meters, Moneta, Ways I help, journey timeline) is assembled
 // across Phases 1 & 3.
 export default function You() {
+  const { colors } = useTheme();
   const { session, signOut } = useAuth();
   const { profile, loading } = useProfile();
   const [busy, setBusy] = useState(false);
@@ -40,35 +42,25 @@ export default function You() {
   return (
     <Screen>
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={40} color={colors.spark} />
+        <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
+          <Ionicons name="person" size={40} color={colors.accent} />
         </View>
-        <Text variant="title" weight="extrabold" center>
+        <Text variant="title" center>
           {name}
         </Text>
-        <Text variant="body" tone="soft" center>
+        <Text variant="body" tone="secondary" center>
           {session?.user.email}
         </Text>
       </View>
 
       <Card style={styles.rowCard}>
-        <Row
-          icon={stage.icon}
-          label="Celestial stage"
-          value={stage.label}
-        />
+        <Row icon={stage.icon} label="Celestial stage" value={stage.label} />
         <Divider />
         <Row
           icon={profile?.verified ? 'shield-checkmark' : 'shield-outline'}
           label="Verification"
-          value={
-            loading
-              ? '…'
-              : profile?.verified
-                ? 'Verified'
-                : 'Not verified yet'
-          }
-          valueTone={profile?.verified ? 'spark' : 'soft'}
+          value={loading ? '…' : profile?.verified ? 'Verified' : 'Not verified yet'}
+          valueTone={profile?.verified ? 'accent' : 'secondary'}
         />
         {memberSince ? (
           <>
@@ -84,12 +76,7 @@ export default function You() {
       </Text>
 
       <View style={styles.signOut}>
-        <Button
-          label="Sign out"
-          variant="secondary"
-          busy={busy}
-          onPress={onSignOut}
-        />
+        <Button label="Sign out" variant="secondary" busy={busy} onPress={onSignOut} />
       </View>
     </Screen>
   );
@@ -99,16 +86,17 @@ function Row({
   icon,
   label,
   value,
-  valueTone = 'ink',
+  valueTone = 'primary',
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
-  valueTone?: 'ink' | 'soft' | 'spark';
+  valueTone?: 'primary' | 'secondary' | 'accent';
 }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={20} color={colors.inkSoft} />
+      <Ionicons name={icon} size={20} color={colors.textSecondary} />
       <Text variant="body" style={{ flex: 1 }}>
         {label}
       </Text>
@@ -120,7 +108,8 @@ function Row({
 }
 
 function Divider() {
-  return <View style={styles.divider} />;
+  const { colors } = useTheme();
+  return <View style={[styles.divider, { backgroundColor: colors.surfaceEdge }]} />;
 }
 
 const styles = StyleSheet.create({
@@ -134,7 +123,6 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.sparkSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -146,7 +134,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
   },
-  divider: { height: 1, backgroundColor: colors.paperEdge },
+  divider: { height: 1 },
   note: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   signOut: { paddingTop: spacing.xxl },
 });

@@ -6,13 +6,15 @@ import { Button, Card, Screen, Sheet, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import { useProfile } from '@/lib/hooks/useProfile';
-import { colors, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 // The home screen (PRD 10.4): a calm greeting, a Celestial Journey glance in
 // impact language, an activity glance, and the two big actions. The actions
 // are placeholders in Phase 0 — the raise-help + dispatch flows arrive in
 // Phase 2 — so tapping them opens a gentle "coming soon" sheet.
 export default function Home() {
+  const { colors } = useTheme();
   const { session } = useAuth();
   const { profile } = useProfile();
   const [sheet, setSheet] = useState<null | 'need' | 'help'>(null);
@@ -28,10 +30,10 @@ export default function Home() {
     <Screen>
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text variant="small" tone="soft">
+          <Text variant="small" tone="secondary">
             Hello,
           </Text>
-          <Text variant="title" weight="extrabold" numberOfLines={1}>
+          <Text variant="title" numberOfLines={1}>
             {firstName}
           </Text>
         </View>
@@ -40,19 +42,19 @@ export default function Home() {
       {/* Celestial Journey glance — the night surface, impact language. */}
       <Card tone="night" style={styles.journeyCard}>
         <View style={styles.journeyRow}>
-          <View style={styles.stageBadge}>
-            <Ionicons name={stage.icon} size={26} color={colors.paper} />
+          <View style={[styles.stageBadge, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
+            <Ionicons name={stage.icon} size={26} color={colors.moonlightStrong} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="small" style={{ color: colors.paperEdge }}>
+            <Text variant="small" tone="moonlight">
               Your journey
             </Text>
-            <Text variant="heading" weight="bold" style={{ color: colors.cloud }}>
+            <Text variant="heading" weight="bold" style={{ color: colors.moonlightStrong }}>
               {stage.label}
             </Text>
           </View>
         </View>
-        <Text variant="body" style={{ color: colors.paperEdge }}>
+        <Text variant="body" tone="moonlight">
           {uniqueHelps === 0
             ? "You've reached no neighbours yet — your first help lights the way."
             : `You've reached ${uniqueHelps} ${uniqueHelps === 1 ? 'neighbour' : 'neighbours'}.`}
@@ -61,8 +63,8 @@ export default function Home() {
 
       {/* Activity glance (aggregate; real counts arrive with the engine). */}
       <View style={styles.activityRow}>
-        <Ionicons name="people-outline" size={18} color={colors.inkSoft} />
-        <Text variant="small" tone="soft">
+        <Ionicons name="people-outline" size={18} color={colors.textSecondary} />
+        <Text variant="small" tone="secondary">
           No helps near you yet this week
         </Text>
       </View>
@@ -89,7 +91,7 @@ export default function Home() {
         onClose={() => setSheet(null)}
         title={sheet === 'need' ? 'Ask for help' : 'Help someone'}
       >
-        <Text variant="body" tone="soft">
+        <Text variant="body" tone="secondary">
           {sheet === 'need'
             ? 'This is where you’ll raise a request in three taps — pick what you need, say when, and nearby verified helpers get pinged.'
             : 'This is where you’ll see nearby people who need a hand and offer to help.'}
@@ -116,7 +118,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },

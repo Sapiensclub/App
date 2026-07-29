@@ -5,11 +5,15 @@ import {
   NunitoSans_700Bold,
   NunitoSans_800ExtraBold,
 } from '@expo-google-fonts/nunito-sans';
-import { CabinSketch_700Bold } from '@expo-google-fonts/cabin-sketch';
+import {
+  CabinSketch_400Regular,
+  CabinSketch_700Bold,
+} from '@expo-google-fonts/cabin-sketch';
 import { useFonts } from 'expo-font';
 
-// Registers the brand fonts. Returns [loaded, error] from useFonts; the root
-// layout keeps the splash screen up until this resolves so text never flashes
+// Registers the brand fonts (matching the website: Nunito Sans for body,
+// Cabin Sketch for display/headlines). Returns [loaded, error] from useFonts;
+// the root layout holds the splash until this resolves so text never flashes
 // in a fallback system font.
 export function useAppFonts() {
   return useFonts({
@@ -18,6 +22,7 @@ export function useAppFonts() {
     NunitoSans_600SemiBold,
     NunitoSans_700Bold,
     NunitoSans_800ExtraBold,
+    CabinSketch_400Regular,
     CabinSketch_700Bold,
   });
 }

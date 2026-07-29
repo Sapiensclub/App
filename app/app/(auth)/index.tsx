@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Logo } from '@/components/Logo';
+import { Button, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { phoneOtp, PhoneOtpNotAvailableError } from '@/lib/auth/phoneOtp';
-import { colors } from '@/theme/tokens';
+import { radius, spacing, type as typeScale } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 type Mode = 'signin' | 'signup';
 
@@ -22,6 +22,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD = 6;
 
 export default function SignIn() {
+  const { colors } = useTheme();
   const { signInWithPassword, signUpWithPassword } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -38,28 +39,20 @@ export default function SignIn() {
       return;
     }
     if (password.length < MIN_PASSWORD) {
-      Alert.alert(
-        'Password too short',
-        `Use at least ${MIN_PASSWORD} characters.`,
-      );
+      Alert.alert('Password too short', `Use at least ${MIN_PASSWORD} characters.`);
       return;
     }
     setBusy(true);
     try {
       if (isSignup) {
-        const { needsEmailConfirmation } = await signUpWithPassword(
-          trimmed,
-          password,
-        );
+        const { needsEmailConfirmation } = await signUpWithPassword(trimmed, password);
         if (needsEmailConfirmation) {
           Alert.alert(
             'Confirm your email',
-            'Account created. Email confirmation is turned on, so check your ' +
-              'inbox to confirm before signing in. (You can turn this off in ' +
-              'Supabase for easier testing.)',
+            'Account created. Email confirmation is on, so check your inbox to ' +
+              'confirm before signing in. (You can turn this off in Supabase for testing.)',
           );
         }
-        // Otherwise the auth listener logs us in and the app swaps screens.
       } else {
         await signInWithPassword(trimmed, password);
       }
@@ -74,38 +67,43 @@ export default function SignIn() {
   }
 
   async function onPhoneInstead() {
-    // Demonstrates the phone-OTP seam. The stub throws a friendly error in
-    // Phase 0; the real SMS provider replaces it later with no UI change.
     try {
       await phoneOtp.sendCode('+910000000000');
     } catch (e) {
-      const msg =
-        e instanceof PhoneOtpNotAvailableError ? e.message : messageOf(e);
+      const msg = e instanceof PhoneOtpNotAvailableError ? e.message : messageOf(e);
       Alert.alert('Phone sign-in', msg);
     }
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <Screen scroll={false}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.body}>
           <View style={styles.header}>
-            <Text style={styles.brand}>Sapiens</Text>
-            <Text style={styles.tagline}>People helping people, nearby.</Text>
+            <Logo height={72} />
+            <Text variant="display" center style={styles.brand}>
+              Sapiens
+            </Text>
+            <Text variant="body" tone="secondary" center>
+              People helping people, nearby.
+            </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>
+            <Text variant="heading" weight="bold">
               {isSignup ? 'Create your account' : 'Welcome back'}
             </Text>
 
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary },
+              ]}
               placeholder="you@example.com"
-              placeholderTextColor={colors.inkSoft}
+              placeholderTextColor={colors.textFaint}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
@@ -116,11 +114,16 @@ export default function SignIn() {
               returnKeyType="next"
             />
 
-            <View style={styles.passwordRow}>
+            <View
+              style={[
+                styles.passwordRow,
+                { backgroundColor: colors.inputBg, borderColor: colors.inputBorder },
+              ]}
+            >
               <TextInput
-                style={styles.passwordInput}
+                style={[styles.passwordInput, { color: colors.textPrimary }]}
                 placeholder="Password"
-                placeholderTextColor={colors.inkSoft}
+                placeholderTextColor={colors.textFaint}
                 autoCapitalize="none"
                 autoCorrect={false}
                 secureTextEntry={!showPassword}
@@ -131,18 +134,14 @@ export default function SignIn() {
                 returnKeyType="go"
                 onSubmitEditing={onSubmit}
               />
-              <Pressable
-                onPress={() => setShowPassword((s) => !s)}
-                hitSlop={10}
-                style={styles.showBtn}
-              >
-                <Text style={styles.showText}>
+              <Pressable onPress={() => setShowPassword((s) => !s)} hitSlop={10} style={styles.showBtn}>
+                <Text variant="small" weight="bold" tone="accent">
                   {showPassword ? 'Hide' : 'Show'}
                 </Text>
               </Pressable>
             </View>
 
-            <PrimaryButton
+            <Button
               label={isSignup ? 'Create account' : 'Sign in'}
               onPress={onSubmit}
               busy={busy}
@@ -152,51 +151,30 @@ export default function SignIn() {
               onPress={() => setMode(isSignup ? 'signin' : 'signup')}
               hitSlop={12}
               disabled={busy}
+              style={styles.linkBtn}
             >
-              <Text style={styles.link}>
-                {isSignup
-                  ? 'Already have an account? Sign in'
-                  : 'New here? Create an account'}
+              <Text variant="label" weight="semibold" center style={underline(colors.accent)}>
+                {isSignup ? 'Already have an account? Sign in' : 'New here? Create an account'}
               </Text>
             </Pressable>
 
-            <Pressable onPress={onPhoneInstead} hitSlop={12} disabled={busy}>
-              <Text style={styles.linkMuted}>Use phone instead</Text>
+            <Pressable onPress={onPhoneInstead} hitSlop={12} disabled={busy} style={styles.linkBtn}>
+              <Text variant="small" weight="semibold" tone="faint" center>
+                Use phone instead
+              </Text>
             </Pressable>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
-function PrimaryButton({
-  label,
-  onPress,
-  busy,
-}: {
-  label: string;
-  onPress: () => void;
-  busy: boolean;
-}) {
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        pressed && styles.buttonPressed,
-        busy && styles.buttonDisabled,
-      ]}
-      onPress={onPress}
-      disabled={busy}
-      accessibilityRole="button"
-    >
-      {busy ? (
-        <ActivityIndicator color={colors.cloud} />
-      ) : (
-        <Text style={styles.buttonText}>{label}</Text>
-      )}
-    </Pressable>
-  );
+function underline(color: string) {
+  return {
+    textDecorationLine: 'underline' as const,
+    textDecorationColor: color,
+  };
 }
 
 function messageOf(e: unknown): string {
@@ -205,70 +183,31 @@ function messageOf(e: unknown): string {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.paper },
   flex: { flex: 1 },
-  body: {
-    flex: 1,
-    paddingHorizontal: 28,
-    justifyContent: 'center',
-    gap: 40,
-  },
-  header: { alignItems: 'center', gap: 8 },
-  brand: { fontSize: 44, fontWeight: '800', color: colors.ink },
-  tagline: { fontSize: 17, color: colors.inkSoft, textAlign: 'center' },
-  form: { gap: 16 },
-  label: { fontSize: 20, fontWeight: '700', color: colors.ink },
+  body: { flex: 1, justifyContent: 'center', gap: spacing.xxxl },
+  header: { alignItems: 'center', gap: spacing.sm },
+  brand: { marginTop: spacing.sm },
+  form: { gap: spacing.lg },
   input: {
-    backgroundColor: colors.cloud,
     borderWidth: 1,
-    borderColor: '#E3DACB',
-    borderRadius: 14,
+    borderRadius: radius.lg,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    fontSize: 18,
-    color: colors.ink,
+    fontSize: typeScale.body.fontSize,
   },
   passwordRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cloud,
     borderWidth: 1,
-    borderColor: '#E3DACB',
-    borderRadius: 14,
+    borderRadius: radius.lg,
     paddingRight: 14,
   },
   passwordInput: {
     flex: 1,
     paddingHorizontal: 18,
     paddingVertical: 16,
-    fontSize: 18,
-    color: colors.ink,
+    fontSize: typeScale.body.fontSize,
   },
   showBtn: { paddingHorizontal: 6, paddingVertical: 8 },
-  showText: { color: colors.spark, fontSize: 15, fontWeight: '700' },
-  button: {
-    backgroundColor: colors.spark,
-    borderRadius: 14,
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 56,
-  },
-  buttonPressed: { opacity: 0.85 },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: colors.cloud, fontSize: 18, fontWeight: '700' },
-  link: {
-    color: colors.spark,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 6,
-  },
-  linkMuted: {
-    color: colors.inkSoft,
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 4,
-  },
+  linkBtn: { paddingVertical: 4 },
 });

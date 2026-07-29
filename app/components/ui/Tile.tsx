@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme/tokens';
+import { radius, sketch, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 import { Text } from './Text';
 
 type TileProps = {
@@ -16,10 +17,11 @@ type TileProps = {
 /**
  * A big, friendly tappable tile — the raise-help home actions and (later) the
  * category grid. Icon + plain words, generous target (PRD 10.5 accessibility).
+ * On the spark-filled tile, text/icon are ink (website rule: spark is a fill).
  */
 export function Tile({ label, hint, icon, onPress, variant = 'plain' }: TileProps) {
+  const { colors } = useTheme();
   const filled = variant === 'filled';
-  const fg = filled ? colors.cloud : colors.ink;
 
   return (
     <Pressable
@@ -27,19 +29,26 @@ export function Tile({ label, hint, icon, onPress, variant = 'plain' }: TileProp
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.base,
-        filled ? styles.filled : styles.plain,
+        filled
+          ? { backgroundColor: colors.accent }
+          : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceEdge },
         pressed && styles.pressed,
       ]}
     >
-      <View style={[styles.iconWrap, filled ? styles.iconWrapFilled : styles.iconWrapPlain]}>
-        <Ionicons name={icon} size={28} color={filled ? colors.cloud : colors.spark} />
+      <View
+        style={[
+          styles.iconWrap,
+          { backgroundColor: filled ? 'rgba(20,20,20,0.14)' : colors.accentSoft },
+        ]}
+      >
+        <Ionicons name={icon} size={28} color={filled ? colors.onAccent : colors.accent} />
       </View>
       <View style={styles.textWrap}>
-        <Text variant="heading" weight="bold" style={{ color: fg }}>
+        <Text variant="heading" weight="bold" tone={filled ? 'onAccent' : 'primary'}>
           {label}
         </Text>
         {hint ? (
-          <Text variant="small" style={{ color: filled ? colors.sparkSoft : colors.inkSoft }}>
+          <Text variant="small" tone={filled ? 'onAccent' : 'secondary'}>
             {hint}
           </Text>
         ) : null}
@@ -50,18 +59,12 @@ export function Tile({ label, hint, icon, onPress, variant = 'plain' }: TileProp
 
 const styles = StyleSheet.create({
   base: {
+    ...sketch.card,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    borderRadius: radius.xl,
     padding: spacing.xl,
     minHeight: 88,
-  },
-  filled: { backgroundColor: colors.spark },
-  plain: {
-    backgroundColor: colors.cloud,
-    borderWidth: 1,
-    borderColor: colors.paperEdge,
   },
   pressed: { opacity: 0.9 },
   iconWrap: {
@@ -71,7 +74,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapFilled: { backgroundColor: 'rgba(255,255,255,0.18)' },
-  iconWrapPlain: { backgroundColor: colors.sparkSoft },
   textWrap: { flex: 1, gap: 2 },
 });

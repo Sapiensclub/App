@@ -1,31 +1,25 @@
 import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
-import { colors, fonts, type } from '@/theme/tokens';
+import { fonts, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 type Variant = 'display' | 'title' | 'heading' | 'body' | 'label' | 'small';
-type Tone = 'ink' | 'soft' | 'faint' | 'spark' | 'inverse';
+type Tone = 'primary' | 'secondary' | 'faint' | 'accent' | 'moonlight' | 'onAccent';
 
 export type TextProps = RNTextProps & {
   variant?: Variant;
   tone?: Tone;
   weight?: keyof typeof fonts;
   center?: boolean;
-  /** Cabin Sketch — celebratory moments only (PRD 10.2). */
+  /** Force Cabin Sketch (celebratory body-size text, e.g. a milestone line). */
   celebrate?: boolean;
 };
 
-const toneColor: Record<Tone, string> = {
-  ink: colors.ink,
-  soft: colors.inkSoft,
-  faint: colors.inkFaint,
-  spark: colors.spark,
-  inverse: colors.cloud,
-};
-
-// Default weight per variant (all Nunito Sans unless `celebrate`).
-const variantWeight: Record<Variant, keyof typeof fonts> = {
-  display: 'extrabold',
-  title: 'bold',
+// Font per variant. display + title are the Cabin Sketch headlines; heading and
+// below stay in Nunito Sans (kept under Cabin Sketch's ~28px size floor).
+const variantFont: Record<Variant, keyof typeof fonts> = {
+  display: 'display',
+  title: 'display',
   heading: 'bold',
   body: 'regular',
   label: 'semibold',
@@ -33,21 +27,32 @@ const variantWeight: Record<Variant, keyof typeof fonts> = {
 };
 
 /**
- * The single text primitive. Applies the brand font, type scale, and tone so
- * screens never hand-roll fontFamily/among sizes. Use `celebrate` sparingly.
+ * The single text primitive — applies the brand fonts, type scale, and a
+ * theme-aware tone so screens never hand-roll fontFamily/sizes/colors.
  */
 export function Text({
   variant = 'body',
-  tone = 'ink',
+  tone = 'primary',
   weight,
   center,
   celebrate,
   style,
   ...rest
 }: TextProps) {
+  const { colors } = useTheme();
+
+  const toneColor: Record<Tone, string> = {
+    primary: colors.textPrimary,
+    secondary: colors.textSecondary,
+    faint: colors.textFaint,
+    accent: colors.accent, // use only at >=24px on paper (contrast); fine on night
+    moonlight: colors.moonlight, // secondary text on night surfaces
+    onAccent: colors.onAccent,
+  };
+
   const fontFamily = celebrate
     ? fonts.celebrate
-    : fonts[weight ?? variantWeight[variant]];
+    : fonts[weight ?? variantFont[variant]];
 
   return (
     <RNText

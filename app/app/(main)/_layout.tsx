@@ -1,26 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
-import { colors, fonts } from '@/theme/tokens';
+import { fonts } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 // The four-tab skeleton from PRD 10.3: Home · Moments · Inbox · You.
 // (SOS is a persistent guarded button, not a tab — it arrives in Phase 5.
 //  The notifications bell lives on Home, added in Phase 6.)
 export default function MainTabsLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.spark,
-        tabBarInactiveTintColor: colors.inkFaint,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textFaint,
         tabBarStyle: {
-          backgroundColor: colors.cloud,
-          borderTopColor: colors.paperEdge,
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.surfaceEdge,
           height: 88,
           paddingTop: 8,
         },
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 12 },
-        sceneStyle: { backgroundColor: colors.paper },
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen

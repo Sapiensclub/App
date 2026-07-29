@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, radius, spacing } from '@/theme/tokens';
+import { radius, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 import { Text } from './Text';
 
 type SheetProps = {
@@ -17,6 +18,8 @@ type SheetProps = {
  * Slides up over a dimmed backdrop; tap outside or the handle area to close.
  */
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
+  const { colors } = useTheme();
+
   return (
     <Modal
       visible={visible}
@@ -27,8 +30,8 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
     >
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={styles.sheetWrap} pointerEvents="box-none">
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={styles.handle} />
+        <SafeAreaView edges={['bottom']} style={[styles.sheet, { backgroundColor: colors.bg }]}>
+          <View style={[styles.handle, { backgroundColor: colors.surfaceEdge }]} />
           {title ? (
             <Text variant="heading" weight="bold" style={styles.title}>
               {title}
@@ -44,11 +47,10 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(27, 36, 64, 0.45)', // celestial-night dim
+    backgroundColor: 'rgba(11, 10, 24, 0.55)', // celestial-night-deep dim
   },
   sheetWrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.paper,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
     paddingHorizontal: spacing.xl,
@@ -61,7 +63,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 5,
     borderRadius: radius.pill,
-    backgroundColor: colors.paperEdge,
     marginBottom: spacing.sm,
   },
   title: { marginBottom: spacing.xs },

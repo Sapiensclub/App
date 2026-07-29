@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/theme/tokens';
+import { spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 type ScreenProps = {
   children: ReactNode;
@@ -17,7 +18,7 @@ type ScreenProps = {
 };
 
 /**
- * Every screen's outer wrapper: paper background + safe-area insets +
+ * Every screen's outer wrapper: themed background + safe-area insets +
  * consistent padding. Keeps screens uniform and the layout code short.
  */
 export function Screen({
@@ -28,10 +29,11 @@ export function Screen({
   style,
   contentStyle,
 }: ScreenProps) {
+  const { colors } = useTheme();
   const inner = padded ? styles.padded : undefined;
 
   return (
-    <SafeAreaView style={[styles.safe, style]} edges={edges}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }, style]} edges={edges}>
       {scroll ? (
         <ScrollView
           contentContainerStyle={[styles.scrollContent, inner, contentStyle]}
@@ -48,7 +50,7 @@ export function Screen({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper },
+  safe: { flex: 1 },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   padded: { paddingHorizontal: spacing.xl },

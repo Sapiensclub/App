@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
 import { useAppFonts } from '@/theme/fonts';
-import { colors } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 // Keep the native splash up until we know both (a) the brand fonts are loaded
 // and (b) whether there's a saved session — so the app never flashes a
@@ -14,6 +14,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { session, initializing } = useAuth();
+  const { colors, scheme } = useTheme();
   const [fontsLoaded, fontError] = useAppFonts();
 
   const ready = !initializing && (fontsLoaded || !!fontError);
@@ -25,22 +26,24 @@ function RootNavigator() {
   if (!ready) return null; // splash screen stays visible
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.paper },
-      }}
-    >
-      {/* Exactly one group is reachable at a time. When `session` flips
-          (after signing in, or signing out), expo-router swaps groups
-          automatically — no manual navigation needed. */}
-      <Stack.Protected guard={!!session}>
-        <Stack.Screen name="(main)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!session}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        {/* Exactly one group is reachable at a time. When `session` flips,
+            expo-router swaps groups automatically — no manual navigation. */}
+        <Stack.Protected guard={!!session}>
+          <Stack.Screen name="(main)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+    </>
   );
 }
 
@@ -48,7 +51,6 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <RootNavigator />
-      <StatusBar style="dark" />
     </AuthProvider>
   );
 }

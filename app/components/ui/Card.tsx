@@ -1,35 +1,31 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/theme/tokens';
+import { sketch, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 
 type CardProps = {
   children: ReactNode;
   /** 'night' = celestial dark surface, for the Journey / celebratory moments. */
-  tone?: 'cloud' | 'night';
+  tone?: 'surface' | 'night';
   style?: ViewStyle;
 };
 
-/** A soft rounded container that sits on the paper background. */
-export function Card({ children, tone = 'cloud', style }: CardProps) {
-  return (
-    <View style={[styles.base, tone === 'night' ? styles.night : styles.cloud, style]}>
-      {children}
-    </View>
-  );
+/** A soft, hand-drawn rounded container that sits on the page background. */
+export function Card({ children, tone = 'surface', style }: CardProps) {
+  const { colors } = useTheme();
+
+  const toneStyle: ViewStyle =
+    tone === 'night'
+      ? { backgroundColor: colors.night, borderWidth: 1, borderColor: colors.nightEdge }
+      : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceEdge };
+
+  return <View style={[styles.base, toneStyle, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radius.xl,
+    ...sketch.card,
     padding: spacing.xl,
-  },
-  cloud: {
-    backgroundColor: colors.cloud,
-    borderWidth: 1,
-    borderColor: colors.paperEdge,
-  },
-  night: {
-    backgroundColor: colors.night,
   },
 });

@@ -6,10 +6,11 @@ import {
   type PressableProps,
 } from 'react-native';
 
-import { colors, radius, spacing, HIT_TARGET } from '@/theme/tokens';
+import { sketch, spacing, HIT_TARGET } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'night';
 
 type ButtonProps = Omit<PressableProps, 'style'> & {
   label: string;
@@ -17,13 +18,14 @@ type ButtonProps = Omit<PressableProps, 'style'> & {
   variant?: Variant;
   busy?: boolean;
   disabled?: boolean;
-  /** Optional leading element (e.g. an icon). */
   left?: React.ReactNode;
 };
 
 /**
- * The one button. Large touch target, high contrast, clear pressed + busy
- * states. `primary` = filled spark; `secondary` = outlined; `ghost` = text.
+ * The one button — hand-drawn "wobble" corners, high contrast, large target.
+ * primary = spark fill · secondary = ink outline · ghost = text only ·
+ * night = gold fill (for celestial/night surfaces). All labels are onAccent
+ * (dark) text — spark/gold are fills, never small colored text (contrast).
  */
 export function Button({
   label,
@@ -34,8 +36,22 @@ export function Button({
   left,
   ...rest
 }: ButtonProps) {
+  const { colors } = useTheme();
   const isDisabled = disabled || busy;
-  const tone = variant === 'primary' ? 'inverse' : 'spark';
+
+  const fill: Record<Variant, object> = {
+    primary: { backgroundColor: colors.accent },
+    secondary: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: colors.textPrimary,
+    },
+    ghost: { backgroundColor: 'transparent' },
+    night: { backgroundColor: colors.gold },
+  };
+  // ghost sits on the page → primary text; the rest sit on a light fill/outline.
+  const tone = variant === 'ghost' ? 'primary' : variant === 'secondary' ? 'primary' : 'onAccent';
+  const spinner = variant === 'primary' || variant === 'night' ? colors.onAccent : colors.textPrimary;
 
   return (
     <Pressable
@@ -45,14 +61,15 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy }}
       style={({ pressed }) => [
         styles.base,
-        variantStyles[variant],
+        variant !== 'ghost' && sketch.button,
+        fill[variant],
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
       ]}
       {...rest}
     >
       {busy ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.cloud : colors.spark} />
+        <ActivityIndicator color={spinner} />
       ) : (
         <View style={styles.content}>
           {left}
@@ -68,7 +85,6 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: HIT_TARGET,
-    borderRadius: radius.lg,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     alignItems: 'center',
@@ -79,16 +95,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.5 },
-});
-
-const variantStyles = StyleSheet.create({
-  primary: { backgroundColor: colors.spark },
-  secondary: {
-    backgroundColor: colors.cloud,
-    borderWidth: 1.5,
-    borderColor: colors.spark,
-  },
-  ghost: { backgroundColor: 'transparent' },
 });
