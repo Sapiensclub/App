@@ -16,46 +16,58 @@ import { useAuth } from '@/lib/auth/AuthProvider';
 import { phoneOtp, PhoneOtpNotAvailableError } from '@/lib/auth/phoneOtp';
 import { colors } from '@/theme/tokens';
 
-type Step = 'email' | 'code';
+type Mode = 'signin' | 'signup';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD = 6;
 
 export default function SignIn() {
-  const { sendEmailCode, verifyEmailCode } = useAuth();
-  const [step, setStep] = useState<Step>('email');
+  const { signInWithPassword, signUpWithPassword } = useAuth();
+  const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  async function onSendCode() {
+  const isSignup = mode === 'signup';
+
+  async function onSubmit() {
     const trimmed = email.trim();
     if (!EMAIL_RE.test(trimmed)) {
       Alert.alert('Check your email', 'Please enter a valid email address.');
       return;
     }
-    setBusy(true);
-    try {
-      await sendEmailCode(trimmed);
-      setStep('code');
-    } catch (e) {
-      Alert.alert('Could not send code', messageOf(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onVerify() {
-    if (code.trim().length < 6) {
-      Alert.alert('Enter the code', 'The code is 6 digits.');
+    if (password.length < MIN_PASSWORD) {
+      Alert.alert(
+        'Password too short',
+        `Use at least ${MIN_PASSWORD} characters.`,
+      );
       return;
     }
     setBusy(true);
     try {
-      // On success the auth listener updates the session and the app swaps
-      // to the signed-in area automatically — nothing to navigate here.
-      await verifyEmailCode(email, code);
+      if (isSignup) {
+        const { needsEmailConfirmation } = await signUpWithPassword(
+          trimmed,
+          password,
+        );
+        if (needsEmailConfirmation) {
+          Alert.alert(
+            'Confirm your email',
+            'Account created. Email confirmation is turned on, so check your ' +
+              'inbox to confirm before signing in. (You can turn this off in ' +
+              'Supabase for easier testing.)',
+          );
+        }
+        // Otherwise the auth listener logs us in and the app swaps screens.
+      } else {
+        await signInWithPassword(trimmed, password);
+      }
     } catch (e) {
-      Alert.alert('That code did not work', messageOf(e));
+      Alert.alert(
+        isSignup ? 'Could not create account' : 'Could not sign in',
+        messageOf(e),
+      );
     } finally {
       setBusy(false);
     }
@@ -85,70 +97,73 @@ export default function SignIn() {
             <Text style={styles.tagline}>People helping people, nearby.</Text>
           </View>
 
-          {step === 'email' ? (
-            <View style={styles.form}>
-              <Text style={styles.label}>Sign in with your email</Text>
+          <View style={styles.form}>
+            <Text style={styles.label}>
+              {isSignup ? 'Create your account' : 'Welcome back'}
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.inkSoft}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              value={email}
+              onChangeText={setEmail}
+              editable={!busy}
+              returnKeyType="next"
+            />
+
+            <View style={styles.passwordRow}>
               <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
+                style={styles.passwordInput}
+                placeholder="Password"
                 placeholderTextColor={colors.inkSoft}
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                value={email}
-                onChangeText={setEmail}
+                secureTextEntry={!showPassword}
+                textContentType={isSignup ? 'newPassword' : 'password'}
+                value={password}
+                onChangeText={setPassword}
                 editable={!busy}
                 returnKeyType="go"
-                onSubmitEditing={onSendCode}
+                onSubmitEditing={onSubmit}
               />
-              <PrimaryButton
-                label="Send me a code"
-                onPress={onSendCode}
-                busy={busy}
-              />
-              <Pressable onPress={onPhoneInstead} hitSlop={12}>
-                <Text style={styles.link}>Use phone instead</Text>
+              <Pressable
+                onPress={() => setShowPassword((s) => !s)}
+                hitSlop={10}
+                style={styles.showBtn}
+              >
+                <Text style={styles.showText}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
               </Pressable>
             </View>
-          ) : (
-            <View style={styles.form}>
-              <Text style={styles.label}>Enter the 6-digit code</Text>
-              <Text style={styles.hint}>We emailed it to {email}.</Text>
-              <TextInput
-                style={[styles.input, styles.codeInput]}
-                placeholder="123456"
-                placeholderTextColor={colors.inkSoft}
-                keyboardType="number-pad"
-                textContentType="oneTimeCode"
-                maxLength={6}
-                value={code}
-                onChangeText={setCode}
-                editable={!busy}
-                returnKeyType="go"
-                onSubmitEditing={onVerify}
-                autoFocus
-              />
-              <PrimaryButton label="Verify" onPress={onVerify} busy={busy} />
-              <Pressable
-                onPress={onSendCode}
-                hitSlop={12}
-                disabled={busy}
-              >
-                <Text style={styles.link}>Resend code</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  setStep('email');
-                  setCode('');
-                }}
-                hitSlop={12}
-                disabled={busy}
-              >
-                <Text style={styles.link}>Change email</Text>
-              </Pressable>
-            </View>
-          )}
+
+            <PrimaryButton
+              label={isSignup ? 'Create account' : 'Sign in'}
+              onPress={onSubmit}
+              busy={busy}
+            />
+
+            <Pressable
+              onPress={() => setMode(isSignup ? 'signin' : 'signup')}
+              hitSlop={12}
+              disabled={busy}
+            >
+              <Text style={styles.link}>
+                {isSignup
+                  ? 'Already have an account? Sign in'
+                  : 'New here? Create an account'}
+              </Text>
+            </Pressable>
+
+            <Pressable onPress={onPhoneInstead} hitSlop={12} disabled={busy}>
+              <Text style={styles.linkMuted}>Use phone instead</Text>
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -203,7 +218,6 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 17, color: colors.inkSoft, textAlign: 'center' },
   form: { gap: 16 },
   label: { fontSize: 20, fontWeight: '700', color: colors.ink },
-  hint: { fontSize: 15, color: colors.inkSoft, marginTop: -8 },
   input: {
     backgroundColor: colors.cloud,
     borderWidth: 1,
@@ -214,11 +228,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: colors.ink,
   },
-  codeInput: {
-    fontSize: 28,
-    letterSpacing: 8,
-    textAlign: 'center',
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cloud,
+    borderWidth: 1,
+    borderColor: '#E3DACB',
+    borderRadius: 14,
+    paddingRight: 14,
   },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    fontSize: 18,
+    color: colors.ink,
+  },
+  showBtn: { paddingHorizontal: 6, paddingVertical: 8 },
+  showText: { color: colors.spark, fontSize: 15, fontWeight: '700' },
   button: {
     backgroundColor: colors.spark,
     borderRadius: 14,
@@ -236,5 +263,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingVertical: 6,
+  },
+  linkMuted: {
+    color: colors.inkSoft,
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 4,
   },
 });

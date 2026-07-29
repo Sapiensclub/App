@@ -11,17 +11,25 @@ import { AppState, type AppStateStatus } from 'react-native';
 
 import { supabase } from '../supabase';
 
+type SignUpResult = { needsEmailConfirmation: boolean };
+
 type AuthContextValue = {
   /** Current signed-in session, or null. */
   session: Session | null;
   /** True until we've checked storage for an existing session at startup. */
   initializing: boolean;
-  /** Email a 6-digit sign-in code (creates the account on first use). */
-  sendEmailCode: (email: string) => Promise<void>;
-  /** Verify the emailed code; on success the session is set automatically. */
-  verifyEmailCode: (email: string, code: string) => Promise<void>;
+  /** Create an account with email + password. */
+  signUpWithPassword: (email: string, password: string) => Promise<SignUpResult>;
+  /** Sign in with email + password. */
+  signInWithPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
+
+// NOTE (Phase 0): email + password is a deliberately simple auth path for
+// testing — no email delivery required to log in. The real flow is email OTP /
+// magic link (added once a proper email provider is configured). Both are just
+// different Supabase auth calls behind this same context, so screens don't
+// change when we swap. Phone OTP remains stubbed in ./phoneOtp.
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -62,20 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     session,
     initializing,
-    async sendEmailCode(email) {
-      const { error } = await supabase.auth.signInWithOtp({
+    async signUpWithPassword(email, password) {
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
-        // Allow new users to be created by signing in — this is both sign-up
-        // and sign-in. (KYC verification is a separate gate, added in Phase 1.)
-        options: { shouldCreateUser: true },
+        password,
       });
       if (error) throw error;
+      // If "Confirm email" is ON in Supabase, signUp returns a user but no
+      // session (they must confirm first). With it OFF (recommended for Phase
+      // 0 testing), a session is returned and onAuthStateChange logs them in.
+      return { needsEmailConfirmation: !data.session };
     },
-    async verifyEmailCode(email, code) {
-      const { error } = await supabase.auth.verifyOtp({
+    async signInWithPassword(email, password) {
+      const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        token: code.trim(),
-        type: 'email',
+        password,
       });
       if (error) throw error;
     },
