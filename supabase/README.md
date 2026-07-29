@@ -11,8 +11,24 @@ This folder holds everything that lives on the Supabase side:
 Migrations are numbered and applied in order — the database schema is defined
 **only** here, never by clicking around the dashboard, so it stays reproducible.
 
-The Supabase CLI config (`config.toml`) is generated when we first link the
-hosted project (Phase 0, Chunk B).
+## Applying migrations to the hosted project
+
+One-time setup (from the repo root):
+
+```
+npx supabase login
+npx supabase link --project-ref <your-project-ref>
+```
+
+(`<your-project-ref>` is the id in your dashboard URL:
+`https://supabase.com/dashboard/project/<your-project-ref>`. The link step
+asks for the database password you chose when creating the project.)
+
+Then, whenever there are new migration files:
+
+```
+npx supabase db push
+```
 
 ## Rules
 
