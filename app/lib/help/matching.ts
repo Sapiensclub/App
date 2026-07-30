@@ -60,6 +60,7 @@ export type MatchDetails = {
   other_photo: string | null;
   other_stage: string;
   other_trust: number | null;
+  helper_distance_m: number | null;
 };
 
 /** A verified, pinged helper offers to help. */
@@ -101,4 +102,22 @@ export async function loadMatchForRequest(requestId: string): Promise<MatchDetai
     .eq('request_id', requestId)
     .maybeSingle();
   return (data as MatchDetails) ?? null;
+}
+
+// ── Meeting & completion status transitions (Chunk 5) ──────────────────────
+export async function helperOnMyWay(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('helper_on_my_way', { p_match_id: matchId });
+  if (error) throw error;
+}
+export async function helperArrived(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('helper_arrived', { p_match_id: matchId });
+  if (error) throw error;
+}
+export async function helperMarkDone(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('helper_mark_done', { p_match_id: matchId });
+  if (error) throw error;
+}
+export async function seekerConfirmDone(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('seeker_confirm_done', { p_match_id: matchId });
+  if (error) throw error;
 }

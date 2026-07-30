@@ -9,11 +9,12 @@ import { celestialInfo } from '@/lib/celestial';
 import {
   confirmHelper,
   loadMatchForRequest,
+  seekerConfirmDone,
   vetoHelper,
   type Candidate,
   type MatchDetails,
 } from '@/lib/help/matching';
-import { distanceLabel } from '@/lib/location/locationProvider';
+import { distanceLabel, walkingEtaMinutes } from '@/lib/location/locationProvider';
 import { useRealtime } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -90,6 +91,15 @@ export default function RequestWaiting() {
     return () => clearInterval(t);
   }, []);
 
+  // While a helper is en route, refresh every 15s so the ETA stays current
+  // (helper location isn't a realtime source).
+  useEffect(() => {
+    const active = match && match.status !== 'completed' && match.status !== 'cancelled';
+    if (!active) return;
+    const t = setInterval(() => load(), 15000);
+    return () => clearInterval(t);
+  }, [match?.status, load]);
+
   async function onConfirm() {
     if (!candidate || !id) return;
     setBusy(true);
@@ -111,6 +121,19 @@ export default function RequestWaiting() {
       await load();
     } catch {
       Alert.alert('Could not decline', 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onConfirmDone() {
+    if (!match) return;
+    setBusy(true);
+    try {
+      await seekerConfirmDone(match.id);
+      await load();
+    } catch (e) {
+      Alert.alert('Could not confirm', e instanceof Error ? e.message : 'Please try again.');
     } finally {
       setBusy(false);
     }
@@ -146,12 +169,57 @@ export default function RequestWaiting() {
 
   const expiresAt = request.expires_at ? new Date(request.expires_at).getTime() : null;
   const expiredLocally = expiresAt !== null && now > expiresAt && request.status === 'open';
-  const isMatched = !!match && match.status !== 'cancelled';
-  const status = isMatched ? 'matched' : expiredLocally ? 'expired' : request.status;
+  const isCompleted = !!match && match.status === 'completed';
+  const isMatched = !!match && match.status !== 'cancelled' && match.status !== 'completed';
+  const status = isCompleted
+    ? 'completed'
+    : isMatched
+      ? 'matched'
+      : expiredLocally
+        ? 'expired'
+        : request.status;
 
-  // ── Matched: the helper is coming ─────────────────────────────────────────
+  // ── Completed ──────────────────────────────────────────────────────────────
+  if (status === 'completed' && match) {
+    return (
+      <Screen scroll={false}>
+        <View style={styles.center}>
+          <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
+            <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+          </View>
+          <Text variant="title" center celebrate>
+            {match.other_name ?? 'A neighbour'} helped you
+          </Text>
+          <Text variant="body" tone="secondary" center style={styles.copy}>
+            That&apos;s the whole idea. Rating and Moneta arrive with the reward
+            phase.
+          </Text>
+        </View>
+        <View style={styles.footer}>
+          <Button label="Back to home" onPress={() => router.replace('/(main)')} />
+        </View>
+      </Screen>
+    );
+  }
+
+  // ── Matched: the helper is coming / here ──────────────────────────────────
   if (status === 'matched' && match) {
     const stage = celestialInfo(match.other_stage);
+    const awaitingConfirm = !!match.helper_done_at;
+    const headline = awaitingConfirm
+      ? `Did ${match.other_name ?? 'your helper'} help you?`
+      : match.status === 'arrived'
+        ? `${match.other_name ?? 'Your helper'} has arrived`
+        : match.status === 'on_the_way'
+          ? `${match.other_name ?? 'Your helper'} is on the way`
+          : `${match.other_name ?? 'Your helper'} is coming`;
+
+    const dist = match.helper_distance_m;
+    const etaLine =
+      !awaitingConfirm && match.status === 'on_the_way' && dist != null
+        ? `About ${distanceLabel(dist)} away · ~${walkingEtaMinutes(dist)} min`
+        : null;
+
     return (
       <Screen>
         <View style={styles.matchedHeader}>
@@ -163,7 +231,7 @@ export default function RequestWaiting() {
             </View>
           )}
           <Text variant="title" center style={{ marginTop: spacing.md }}>
-            {match.other_name ?? 'Your helper'} is coming
+            {headline}
           </Text>
           <View style={styles.stageRow}>
             <Ionicons name={stage.icon} size={16} color={colors.textSecondary} />
@@ -172,6 +240,11 @@ export default function RequestWaiting() {
               {match.other_trust != null ? ` · ${match.other_trust.toFixed(1)}★` : ''}
             </Text>
           </View>
+          {etaLine ? (
+            <Text variant="body" weight="semibold" tone="accent" style={{ marginTop: spacing.sm }}>
+              {etaLine}
+            </Text>
+          ) : null}
         </View>
 
         <Card style={styles.meetCard}>
@@ -186,17 +259,23 @@ export default function RequestWaiting() {
           </Text>
         </Card>
 
-        <Text variant="small" tone="faint" center style={styles.note}>
-          Live arrival status and completion arrive in the next build step.
-        </Text>
-
         <View style={styles.footer}>
+          {awaitingConfirm ? (
+            <Button label="Yes, they helped me" onPress={onConfirmDone} busy={busy} />
+          ) : null}
           <Button
             label={`Message ${match.other_name ?? 'helper'}`}
-            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
+            variant={awaitingConfirm ? 'secondary' : 'primary'}
+            left={
+              <Ionicons
+                name="chatbubble-ellipses"
+                size={18}
+                color={awaitingConfirm ? colors.accent : colors.onAccent}
+              />
+            }
             onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: id! } })}
           />
-          <Button label="Back to home" variant="secondary" onPress={() => router.replace('/(main)')} />
+          <Button label="Back to home" variant="ghost" onPress={() => router.replace('/(main)')} />
         </View>
       </Screen>
     );

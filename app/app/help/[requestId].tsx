@@ -8,6 +8,9 @@ import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import {
+  helperArrived,
+  helperMarkDone,
+  helperOnMyWay,
   loadMatchForRequest,
   raiseHand,
   withdrawHand,
@@ -20,7 +23,14 @@ import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
-type State = 'loading' | 'can_raise' | 'raised' | 'confirmed' | 'matched_other' | 'unavailable';
+type State =
+  | 'loading'
+  | 'can_raise'
+  | 'raised'
+  | 'confirmed'
+  | 'completed'
+  | 'matched_other'
+  | 'unavailable';
 
 export default function HelperRequest() {
   const { colors } = useTheme();
@@ -44,7 +54,7 @@ export default function HelperRequest() {
     }
     if (m && m.helper_id === myId) {
       setMatch(m);
-      setState('confirmed');
+      setState(m.status === 'completed' ? 'completed' : 'confirmed');
       return;
     }
     if (m) {
@@ -117,6 +127,19 @@ export default function HelperRequest() {
     }
   }
 
+  async function runStep(fn: (id: string) => Promise<void>) {
+    if (!match) return;
+    setBusy(true);
+    try {
+      await fn(match.id);
+      await load();
+    } catch (e) {
+      Alert.alert('Could not update', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (state === 'loading') {
     return (
       <Screen scroll={false}>
@@ -172,15 +195,35 @@ export default function HelperRequest() {
         </Card>
 
         <View style={styles.navWrap}>
+          {/* Status ladder: confirmed → on the way → arrived → done → confirm */}
+          {match.status === 'confirmed' ? (
+            <Button label="I'm on my way" onPress={() => runStep(helperOnMyWay)} busy={busy} />
+          ) : null}
+          {match.status === 'on_the_way' ? (
+            <Button label="I've arrived" onPress={() => runStep(helperArrived)} busy={busy} />
+          ) : null}
+          {match.status === 'arrived' && !match.helper_done_at ? (
+            <Button label="Mark as done" onPress={() => runStep(helperMarkDone)} busy={busy} />
+          ) : null}
+          {match.helper_done_at ? (
+            <View style={[styles.waitingBanner, { backgroundColor: colors.accentSoft }]}>
+              <ActivityIndicator color={colors.accent} />
+              <Text variant="body" weight="semibold" tone="accent" style={{ flex: 1 }}>
+                Waiting for {match.other_name ?? 'them'} to confirm…
+              </Text>
+            </View>
+          ) : null}
+
           <Button
             label={`Message ${match.other_name ?? 'them'}`}
-            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
+            variant="secondary"
+            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.accent} />}
             onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: requestId! } })}
           />
-          {match.meetpoint_lat != null && match.meetpoint_lng != null ? (
+          {match.meetpoint_lat != null && match.meetpoint_lng != null && !match.helper_done_at ? (
             <Button
               label="Navigate to meeting point"
-              variant="secondary"
+              variant="ghost"
               left={<Ionicons name="navigate" size={18} color={colors.accent} />}
               onPress={() =>
                 showLocation({ lat: match.meetpoint_lat!, lng: match.meetpoint_lng! }, 'Meeting point')
@@ -188,10 +231,29 @@ export default function HelperRequest() {
             />
           ) : null}
         </View>
+      </Screen>
+    );
+  }
 
-        <Text variant="small" tone="faint" center style={styles.note}>
-          Live status and completion arrive in the next build step.
-        </Text>
+  // ── Completed ──────────────────────────────────────────────────────────────
+  if (state === 'completed' && match) {
+    return (
+      <Screen scroll={false}>
+        <TopBar title="Help complete" onBack={() => router.replace('/(main)')} />
+        <View style={styles.center}>
+          <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
+            <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+          </View>
+          <Text variant="title" center celebrate>
+            You helped {match.other_name ?? 'a neighbour'}!
+          </Text>
+          <Text variant="body" tone="secondary" center style={styles.copy}>
+            Thank you for showing up. This is what Sapiens is for.
+          </Text>
+        </View>
+        <View style={styles.footer}>
+          <Button label="Done" onPress={() => router.replace('/(main)')} />
+        </View>
       </Screen>
     );
   }
