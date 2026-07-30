@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { track } from '@/lib/analytics';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
 import { useAppFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/useTheme';
@@ -22,6 +23,11 @@ function RootNavigator() {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // Fire once per app launch.
+  useEffect(() => {
+    track('app_opened');
+  }, []);
 
   if (!ready) return null; // splash screen stays visible
 

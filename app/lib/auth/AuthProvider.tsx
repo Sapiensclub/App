@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { identifyUser, resetAnalytics, track } from '../analytics';
 import { supabase } from '../supabase';
 
 type SignUpResult = { needsEmailConfirmation: boolean };
@@ -47,8 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 2. Keep in sync with every future auth change (sign-in, sign-out, token
     //    refresh) — this is what makes "still logged in after restart" work.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    //    Also tie the analytics identity to the session here.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
+      if (next?.user) {
+        identifyUser(next.user.id, { email: next.user.email ?? null });
+      } else if (event === 'SIGNED_OUT') {
+        resetAnalytics();
+      }
     });
 
     // 3. React Native best practice: only auto-refresh tokens while the app is
@@ -76,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
       if (error) throw error;
+      track('signed_up', { method: 'email_password' });
       // If "Confirm email" is ON in Supabase, signUp returns a user but no
       // session (they must confirm first). With it OFF (recommended for Phase
       // 0 testing), a session is returned and onAuthStateChange logs them in.
@@ -87,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
       if (error) throw error;
+      track('signed_in', { method: 'email_password' });
     },
     async signOut() {
       const { error } = await supabase.auth.signOut();
