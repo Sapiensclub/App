@@ -15,6 +15,7 @@ import {
   type MatchDetails,
 } from '@/lib/help/matching';
 import { distanceLabel, showLocation } from '@/lib/location/locationProvider';
+import { useRealtime } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -83,25 +84,14 @@ export default function HelperRequest() {
   }, [load]);
 
   // Live: my responses and matches change → reload.
-  useEffect(() => {
-    if (!requestId || !myId) return;
-    const channel = supabase
-      .channel(`helper-req-${requestId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'request_responses', filter: `request_id=eq.${requestId}` },
-        () => load(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'matches', filter: `request_id=eq.${requestId}` },
-        () => load(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [requestId, myId, load]);
+  useRealtime(
+    requestId && myId ? `helper-req-${requestId}` : null,
+    [
+      { table: 'request_responses', filter: `request_id=eq.${requestId}` },
+      { table: 'matches', filter: `request_id=eq.${requestId}` },
+    ],
+    load,
+  );
 
   async function onRaise() {
     setBusy(true);

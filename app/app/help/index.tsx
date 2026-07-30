@@ -12,6 +12,7 @@ import {
   getCurrentCoords,
   requestLocationPermission,
 } from '@/lib/location/locationProvider';
+import { useRealtime } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -71,25 +72,11 @@ export default function HelpNow() {
   }, [load]);
 
   // Live: new pings for me arrive → refresh.
-  useEffect(() => {
-    if (!session) return;
-    const channel = supabase
-      .channel('my-pings')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'dispatch_targets',
-          filter: `helper_id=eq.${session.user.id}`,
-        },
-        () => load(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session, load]);
+  useRealtime(
+    session ? `my-pings-${session.user.id}` : null,
+    [{ table: 'dispatch_targets', filter: `helper_id=eq.${session?.user.id}` }],
+    load,
+  );
 
   return (
     <Screen scroll={false} padded={false}>

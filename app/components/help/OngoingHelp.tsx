@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import { useRealtime } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -51,17 +52,14 @@ export function OngoingHelp() {
   );
 
   // And live, so a match forming while you sit on Home shows up.
-  useEffect(() => {
-    if (!uid) return;
-    const channel = supabase
-      .channel('ongoing-help')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `seeker_id=eq.${uid}` }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `helper_id=eq.${uid}` }, () => load())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [uid, load]);
+  useRealtime(
+    uid ? `ongoing-${uid}` : null,
+    [
+      { table: 'requests', filter: `seeker_id=eq.${uid}` },
+      { table: 'matches', filter: `helper_id=eq.${uid}` },
+    ],
+    load,
+  );
 
   if (!seekerReq && !helperMatch) return null;
 

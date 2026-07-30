@@ -25,7 +25,7 @@ import {
   type Message,
 } from '@/lib/chat/chat';
 import { loadMatchForRequest, type MatchDetails } from '@/lib/help/matching';
-import { supabase } from '@/lib/supabase';
+import { useRealtime } from '@/lib/realtime';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -61,8 +61,10 @@ export default function Chat() {
     ]);
     setMatch(m);
     setChatId(chat?.id ?? null);
+    // No chat row (e.g. an older match from before chats existed), a closed
+    // chat, or a finished/cancelled match → the conversation is not open.
     setClosed(
-      !!chat?.closed_at || !m || m.status === 'cancelled' || m.status === 'completed',
+      !chat || !!chat.closed_at || !m || m.status === 'cancelled' || m.status === 'completed',
     );
     if (chat?.id) await refreshMessages(chat.id);
     setLoading(false);
@@ -73,20 +75,13 @@ export default function Chat() {
   }, [load]);
 
   // Live messages.
-  useEffect(() => {
-    if (!chatId) return;
-    const channel = supabase
-      .channel(`chat-${chatId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${chatId}` },
-        () => refreshMessages(chatId),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [chatId, refreshMessages]);
+  useRealtime(
+    chatId ? `chat-${chatId}` : null,
+    [{ table: 'messages', filter: `chat_id=eq.${chatId}`, event: 'INSERT' }],
+    () => {
+      if (chatId) refreshMessages(chatId);
+    },
+  );
 
   async function onSend() {
     const body = draft.trim();

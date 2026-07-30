@@ -14,6 +14,7 @@ import {
   type MatchDetails,
 } from '@/lib/help/matching';
 import { distanceLabel } from '@/lib/location/locationProvider';
+import { useRealtime } from '@/lib/realtime';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -74,18 +75,15 @@ export default function RequestWaiting() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    if (!id) return;
-    const channel = supabase
-      .channel(`request-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `id=eq.${id}` }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'request_responses', filter: `request_id=eq.${id}` }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `request_id=eq.${id}` }, () => load())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id, load]);
+  useRealtime(
+    id ? `request-${id}` : null,
+    [
+      { table: 'requests', filter: `id=eq.${id}` },
+      { table: 'request_responses', filter: `request_id=eq.${id}` },
+      { table: 'matches', filter: `request_id=eq.${id}` },
+    ],
+    load,
+  );
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
