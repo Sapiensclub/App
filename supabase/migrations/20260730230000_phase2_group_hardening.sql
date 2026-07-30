@@ -14,9 +14,11 @@ on conflict (key) do nothing;
 
 -- ----------------------------------------------------------------------------
 -- match_details: also expose interaction_type + participant_cap so the app
--- can tell a group match from a one-to-one one.
+-- can tell a group match from a one-to-one one. DROP + CREATE (not REPLACE)
+-- because REPLACE cannot insert columns in the middle of the column list.
 -- ----------------------------------------------------------------------------
-create or replace view public.match_details with (security_invoker = off) as
+drop view if exists public.match_details;
+create view public.match_details with (security_invoker = off) as
   select
     m.id, m.request_id, m.helper_id, m.seeker_id, m.status, m.meetup_code,
     m.confirmed_at, m.helper_done_at, m.seeker_confirmed_at, m.completed_at,
