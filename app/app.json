@@ -46,6 +46,12 @@
         {
           "photosPermission": "Sapiens uses your photos so you can set a display photo."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Sapiens uses your location to find help near you and to let nearby people find your request. Your exact location is never shown to others until you confirm a helper."
+        }
       ]
     ],
     "experiments": {

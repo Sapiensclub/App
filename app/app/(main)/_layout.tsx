@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+import { useLocationSync } from '@/lib/location/useLocationSync';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -9,6 +10,9 @@ import { useTheme } from '@/theme/useTheme';
 //  The notifications bell lives on Home, added in Phase 6.)
 export default function MainTabsLayout() {
   const { colors } = useTheme();
+  // Keep last-known location fresh (only if permission already granted) so
+  // the dispatch engine can find this user as a nearby helper.
+  useLocationSync();
 
   return (
     <Tabs

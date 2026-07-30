@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -18,7 +19,7 @@ export default function Home() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { profile, refetch } = useProfile();
-  const [sheet, setSheet] = useState<null | 'need' | 'help'>(null);
+  const [sheet, setSheet] = useState<null | 'help'>(null);
   const [verifyOpen, setVerifyOpen] = useState(false);
 
   const firstName =
@@ -36,7 +37,11 @@ export default function Home() {
       setVerifyOpen(true);
       return;
     }
-    setSheet(kind);
+    if (kind === 'need') {
+      router.push('/request/new'); // the 3-tap raise-help flow
+    } else {
+      setSheet('help'); // helper side arrives in Chunk 3
+    }
   }
 
   return (
@@ -99,15 +104,10 @@ export default function Home() {
         />
       </View>
 
-      <Sheet
-        visible={sheet !== null}
-        onClose={() => setSheet(null)}
-        title={sheet === 'need' ? 'Ask for help' : 'Help someone'}
-      >
+      <Sheet visible={sheet !== null} onClose={() => setSheet(null)} title="Help someone">
         <Text variant="body" tone="secondary">
-          {sheet === 'need'
-            ? 'This is where you’ll raise a request in three taps — pick what you need, say when, and nearby verified helpers get pinged.'
-            : 'This is where you’ll see nearby people who need a hand and offer to help.'}
+          This is where you’ll see nearby people who need a hand and offer to
+          help.
         </Text>
         <Text variant="small" tone="faint">
           Coming in the next build phase.

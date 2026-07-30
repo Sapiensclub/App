@@ -1,0 +1,368 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Switch,
+  View,
+} from 'react-native';
+
+import { Button, Card, Screen, Text, TextField } from '@/components/ui';
+import { track } from '@/lib/analytics';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import {
+  getCurrentCoords,
+  requestLocationPermission,
+  reverseGeocodeLocality,
+} from '@/lib/location/locationProvider';
+import { supabase } from '@/lib/supabase';
+import { radius as radii, spacing } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
+
+// The raise-help flow (PRD 10.5), stripped to three taps:
+// tap "I need help" → pick a category → say what & when → send.
+
+type Category = {
+  id: string;
+  label: string;
+  icon: string | null;
+  typical_urgency: 'casual' | 'everyday' | 'urgent' | 'sos';
+  default_timing: 'now' | 'scheduled' | 'either';
+};
+
+type Urgency = 'casual' | 'everyday' | 'urgent';
+type Timing = 'now' | 'scheduled';
+
+const URGENCY_LABELS: Record<Urgency, string> = {
+  casual: 'Whenever',
+  everyday: 'Today',
+  urgent: 'Right now',
+};
+
+function schedulePresets(): { label: string; when: Date }[] {
+  const now = new Date();
+  const in1h = new Date(now.getTime() + 60 * 60 * 1000);
+  const in3h = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  const tomorrow9 = new Date(now);
+  tomorrow9.setDate(tomorrow9.getDate() + 1);
+  tomorrow9.setHours(9, 0, 0, 0);
+  const tomorrow18 = new Date(now);
+  tomorrow18.setDate(tomorrow18.getDate() + 1);
+  tomorrow18.setHours(18, 0, 0, 0);
+  return [
+    { label: 'In 1 hour', when: in1h },
+    { label: 'In 3 hours', when: in3h },
+    { label: 'Tomorrow 9 am', when: tomorrow9 },
+    { label: 'Tomorrow 6 pm', when: tomorrow18 },
+  ];
+}
+
+export default function NewRequest() {
+  const { colors } = useTheme();
+  const { session } = useAuth();
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState<Category | null>(null);
+
+  const [description, setDescription] = useState('');
+  const [timing, setTiming] = useState<Timing>('now');
+  const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
+  const [urgency, setUrgency] = useState<Urgency>('everyday');
+  const [preferWomen, setPreferWomen] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('id, label, icon, typical_urgency, default_timing')
+        .eq('enabled', true)
+        .order('label');
+      setCategories((data ?? []) as Category[]);
+      setLoading(false);
+    })();
+  }, []);
+
+  function pickCategory(c: Category) {
+    setCategory(c);
+    // Urgency pre-filled from the category's typical urgency (PRD 10.5);
+    // SOS is never in this control — it maps to "Right now".
+    setUrgency(c.typical_urgency === 'sos' ? 'urgent' : (c.typical_urgency as Urgency));
+    setTiming(c.default_timing === 'scheduled' ? 'scheduled' : 'now');
+    setScheduledAt(null);
+  }
+
+  async function send() {
+    if (!category || !session) return;
+    if (timing === 'scheduled' && !scheduledAt) {
+      Alert.alert('When?', 'Pick a time for your request.');
+      return;
+    }
+    setSending(true);
+    try {
+      const granted = await requestLocationPermission();
+      if (!granted) {
+        Alert.alert(
+          'Location needed',
+          'Sapiens needs your location to find helpers near you. Allow location access in Settings.',
+        );
+        return;
+      }
+      const coords = await getCurrentCoords();
+      const locality = await reverseGeocodeLocality(coords);
+
+      const { data, error } = await supabase
+        .from('requests')
+        .insert({
+          seeker_id: session.user.id,
+          category_id: category.id,
+          description: description.trim() || null,
+          timing,
+          scheduled_at: timing === 'scheduled' ? scheduledAt!.toISOString() : null,
+          urgency,
+          meetpoint_lat: coords.lat,
+          meetpoint_lng: coords.lng,
+          approx_area: locality,
+          prefer_women: preferWomen,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      track('request_raised', { category: category.label, urgency, timing });
+      router.replace({ pathname: '/request/[id]', params: { id: data.id as string } });
+    } catch (e) {
+      Alert.alert(
+        'Could not send',
+        e instanceof Error ? e.message : 'Please try again in a moment.',
+      );
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // ── Step 1: pick a category ────────────────────────────────────────────────
+  if (!category) {
+    return (
+      <Screen>
+        <TopBar title="What do you need?" onBack={() => router.back()} />
+        {loading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {categories.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => pickCategory(c)}
+                style={[
+                  styles.gridTile,
+                  { backgroundColor: colors.surface, borderColor: colors.surfaceEdge },
+                ]}
+                accessibilityRole="button"
+              >
+                <View style={[styles.gridIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons
+                    name={(c.icon ?? 'ellipse-outline') as keyof typeof Ionicons.glyphMap}
+                    size={26}
+                    color={colors.accent}
+                  />
+                </View>
+                <Text variant="label" weight="bold" center>
+                  {c.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </Screen>
+    );
+  }
+
+  // ── Step 2: what & when → send ────────────────────────────────────────────
+  const presets = schedulePresets();
+  return (
+    <Screen>
+      <TopBar title={category.label} onBack={() => setCategory(null)} />
+
+      <View style={styles.form}>
+        <TextField
+          label="What do you need? (optional)"
+          placeholder="e.g. A ride to the clinic on MG Road"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          numberOfLines={2}
+          maxLength={200}
+          style={styles.descInput}
+          editable={!sending}
+        />
+
+        <View style={styles.section}>
+          <Text variant="label" weight="semibold" tone="secondary">
+            When
+          </Text>
+          <View style={styles.chipRow}>
+            <Chip label="Now" active={timing === 'now'} onPress={() => setTiming('now')} />
+            <Chip
+              label="Scheduled"
+              active={timing === 'scheduled'}
+              onPress={() => setTiming('scheduled')}
+            />
+          </View>
+          {timing === 'scheduled' ? (
+            <View style={styles.chipWrap}>
+              {presets.map((p) => (
+                <Chip
+                  key={p.label}
+                  label={p.label}
+                  active={scheduledAt?.getTime() === p.when.getTime()}
+                  onPress={() => setScheduledAt(p.when)}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
+          <Text variant="label" weight="semibold" tone="secondary">
+            How soon do you need it?
+          </Text>
+          <View style={styles.chipRow}>
+            {(Object.keys(URGENCY_LABELS) as Urgency[]).map((u) => (
+              <Chip
+                key={u}
+                label={URGENCY_LABELS[u]}
+                active={urgency === u}
+                onPress={() => setUrgency(u)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <Card style={styles.preferRow}>
+          <View style={{ flex: 1 }}>
+            <Text variant="body" weight="semibold">
+              Prefer women helpers
+            </Text>
+            <Text variant="small" tone="secondary">
+              We will ask women nearby first when possible.
+            </Text>
+          </View>
+          <Switch
+            value={preferWomen}
+            onValueChange={setPreferWomen}
+            trackColor={{ true: colors.accent, false: colors.surfaceEdge }}
+          />
+        </Card>
+
+        <View style={styles.sendWrap}>
+          <Button label="Ask for help" onPress={send} busy={sending} />
+          <Text variant="small" tone="faint" center>
+            Nearby verified helpers will be notified. They see your request and
+            area — never your exact location until you confirm someone.
+          </Text>
+        </View>
+      </View>
+    </Screen>
+  );
+}
+
+function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.topBar}>
+      <Pressable onPress={onBack} hitSlop={12} accessibilityLabel="Back">
+        <Ionicons name="arrow-back" size={26} color={colors.textPrimary} />
+      </Pressable>
+      <Text variant="heading" weight="bold" style={styles.topTitle}>
+        {title}
+      </Text>
+      <View style={{ width: 26 }} />
+    </View>
+  );
+}
+
+function Chip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.chip,
+        {
+          backgroundColor: active ? colors.accent : colors.surface,
+          borderColor: active ? colors.accent : colors.surfaceEdge,
+        },
+      ]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
+      <Text variant="label" weight="bold" tone={active ? 'onAccent' : 'secondary'}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  topTitle: { flex: 1, textAlign: 'center' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingBottom: spacing.xxl,
+  },
+  gridTile: {
+    width: '47.5%',
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  gridIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  form: { gap: spacing.xl, paddingBottom: spacing.xxl },
+  descInput: { minHeight: 72, textAlignVertical: 'top' },
+  section: { gap: spacing.sm },
+  chipRow: { flexDirection: 'row', gap: spacing.sm },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  chip: {
+    borderWidth: 1.5,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  preferRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  sendWrap: { gap: spacing.md, marginTop: spacing.sm },
+});
