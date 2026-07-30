@@ -347,12 +347,16 @@ export default function RequestWaiting() {
             {match.other_name ?? 'A neighbour'} helped you
           </Text>
           <Text variant="body" tone="secondary" center style={styles.copy}>
-            That&apos;s the whole idea. Rating and Moneta arrive with the reward
-            phase.
+            That&apos;s the whole idea. Leave a rating to help build trust.
           </Text>
         </View>
         <View style={styles.footer}>
-          <Button label="Back to home" onPress={() => router.replace('/(main)')} />
+          <Button
+            label={`Rate ${match.other_name ?? 'your helper'}`}
+            left={<Ionicons name="star" size={18} color={colors.onAccent} />}
+            onPress={() => router.replace({ pathname: '/rate/[matchId]', params: { matchId: match.id } })}
+          />
+          <Button label="Not now" variant="ghost" onPress={() => router.replace('/(main)')} />
         </View>
       </Screen>
     );

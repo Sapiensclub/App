@@ -108,6 +108,16 @@ export async function loadMatchForRequest(requestId: string): Promise<MatchDetai
   return (data as MatchDetails) ?? null;
 }
 
+/** Load one match by its id (for the rating flow). */
+export async function loadMatchById(matchId: string): Promise<MatchDetails | null> {
+  const { data } = await supabase
+    .from('match_details')
+    .select('*')
+    .eq('id', matchId)
+    .maybeSingle();
+  return (data as MatchDetails) ?? null;
+}
+
 /** All of a request's matches visible to the caller (a seeker sees each group
  *  participant; a helper sees only their own). */
 export async function loadMatchesForRequest(requestId: string): Promise<MatchDetails[]> {

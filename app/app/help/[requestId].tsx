@@ -264,7 +264,12 @@ export default function HelperRequest() {
           </Text>
         </View>
         <View style={styles.footer}>
-          <Button label="Done" onPress={() => router.replace('/(main)')} />
+          <Button
+            label={`Rate ${match.other_name ?? 'them'}`}
+            left={<Ionicons name="star" size={18} color={colors.onAccent} />}
+            onPress={() => router.replace({ pathname: '/rate/[matchId]', params: { matchId: match.id } })}
+          />
+          <Button label="Not now" variant="ghost" onPress={() => router.replace('/(main)')} />
         </View>
       </Screen>
     );
