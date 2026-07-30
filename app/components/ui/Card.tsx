@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { sketch, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -8,7 +8,7 @@ type CardProps = {
   children: ReactNode;
   /** 'night' = celestial dark surface, for the Journey / celebratory moments. */
   tone?: 'surface' | 'night';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 /** A soft, hand-drawn rounded container that sits on the page background. */

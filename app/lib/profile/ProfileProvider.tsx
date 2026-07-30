@@ -20,13 +20,15 @@ export type MyProfile = {
   celestial_stage: string;
   unique_helps: number;
   total_helps: number;
+  moneta_lifetime: number;
+  moneta_balance: number;
   member_since: string;
   verified: boolean;
   onboarded_at: string | null;
 };
 
 const COLUMNS =
-  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, member_since, verified, onboarded_at';
+  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, moneta_lifetime, moneta_balance, member_since, verified, onboarded_at';
 
 type ProfileContextValue = {
   profile: MyProfile | null;
