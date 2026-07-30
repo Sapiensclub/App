@@ -21,6 +21,7 @@ import {
   cancelReportBlock,
   loadChatForRequest,
   loadMessages,
+  loadParticipantNames,
   sendText,
   type Message,
 } from '@/lib/chat/chat';
@@ -38,6 +39,7 @@ export default function Chat() {
   const [match, setMatch] = useState<MatchDetails | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [closed, setClosed] = useState(false);
+  const [names, setNames] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
@@ -66,9 +68,14 @@ export default function Chat() {
     setClosed(
       !chat || !!chat.closed_at || !m || m.status === 'cancelled' || m.status === 'completed',
     );
-    if (chat?.id) await refreshMessages(chat.id);
+    if (chat?.id) {
+      await refreshMessages(chat.id);
+      setNames(await loadParticipantNames(chat.id));
+    }
     setLoading(false);
   }, [requestId, refreshMessages]);
+
+  const isGroup = Object.keys(names).length > 2;
 
   useEffect(() => {
     load();
@@ -160,17 +167,24 @@ export default function Chat() {
               const mine = item.sender_id === myId;
               return (
                 <View style={[styles.bubbleRow, mine ? styles.rowMine : styles.rowTheirs]}>
-                  <View
-                    style={[
-                      styles.bubble,
-                      mine
-                        ? { backgroundColor: colors.accent, borderBottomRightRadius: 4 }
-                        : { backgroundColor: colors.surface, borderColor: colors.surfaceEdge, borderWidth: 1, borderBottomLeftRadius: 4 },
-                    ]}
-                  >
-                    <Text variant="body" tone={mine ? 'onAccent' : 'primary'}>
-                      {item.body}
-                    </Text>
+                  <View style={styles.bubbleWrap}>
+                    {!mine && isGroup ? (
+                      <Text variant="small" weight="semibold" tone="accent" style={styles.senderName}>
+                        {names[item.sender_id] ?? 'Neighbour'}
+                      </Text>
+                    ) : null}
+                    <View
+                      style={[
+                        styles.bubble,
+                        mine
+                          ? { backgroundColor: colors.accent, borderBottomRightRadius: 4 }
+                          : { backgroundColor: colors.surface, borderColor: colors.surfaceEdge, borderWidth: 1, borderBottomLeftRadius: 4 },
+                      ]}
+                    >
+                      <Text variant="body" tone={mine ? 'onAccent' : 'primary'}>
+                        {item.body}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               );
@@ -252,8 +266,9 @@ const styles = StyleSheet.create({
   bubbleRow: { marginVertical: spacing.xs, flexDirection: 'row' },
   rowMine: { justifyContent: 'flex-end' },
   rowTheirs: { justifyContent: 'flex-start' },
+  bubbleWrap: { maxWidth: '80%' },
+  senderName: { marginLeft: spacing.md, marginBottom: 2 },
   bubble: {
-    maxWidth: '80%',
     borderRadius: radii.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,

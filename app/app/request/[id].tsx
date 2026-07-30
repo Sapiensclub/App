@@ -2,13 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { celestialInfo } from '@/lib/celestial';
 import {
   confirmHelper,
+  groupEnd,
+  loadMatchesForRequest,
   loadMatchForRequest,
+  retryRequest,
   seekerConfirmDone,
   vetoHelper,
   type Candidate,
@@ -29,6 +32,8 @@ type RequestRow = {
   approx_area: string | null;
   expires_at: string | null;
   category_id: string;
+  interaction_type: 'one_to_one' | 'group' | 'either';
+  participant_cap: number | null;
 };
 
 export default function RequestWaiting() {
@@ -36,16 +41,21 @@ export default function RequestWaiting() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [request, setRequest] = useState<RequestRow | null>(null);
   const [categoryLabel, setCategoryLabel] = useState('');
-  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [match, setMatch] = useState<MatchDetails | null>(null);
+  const [participants, setParticipants] = useState<MatchDetails[]>([]);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
+
+  const candidate = candidates[0] ?? null; // earliest raised (one-to-one veto)
 
   const load = useCallback(async () => {
     if (!id) return;
     const { data: reqRow } = await supabase
       .from('requests')
-      .select('id, status, timing, urgency, description, approx_area, expires_at, category_id')
+      .select(
+        'id, status, timing, urgency, description, approx_area, expires_at, category_id, interaction_type, participant_cap',
+      )
       .eq('id', id)
       .single();
     if (reqRow) {
@@ -60,16 +70,15 @@ export default function RequestWaiting() {
       }
     }
 
-    const m = await loadMatchForRequest(id);
-    setMatch(m);
+    setMatch(await loadMatchForRequest(id));
+    setParticipants(await loadMatchesForRequest(id));
 
-    // earliest raised hand is the current candidate (veto, not pick).
     const { data: cands } = await supabase
       .from('request_candidates')
       .select('*')
       .eq('request_id', id)
       .order('raised_at');
-    setCandidate(((cands ?? []) as Candidate[])[0] ?? null);
+    setCandidates((cands ?? []) as Candidate[]);
   }, [id, categoryLabel]);
 
   useEffect(() => {
@@ -139,6 +148,45 @@ export default function RequestWaiting() {
     }
   }
 
+  async function onAddToGroup(helperId: string) {
+    if (!id) return;
+    setBusy(true);
+    try {
+      await confirmHelper(id, helperId);
+      await load();
+    } catch (e) {
+      Alert.alert('Could not add', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onEndGroup() {
+    if (!id) return;
+    setBusy(true);
+    try {
+      await groupEnd(id);
+      await load();
+    } catch {
+      Alert.alert('Could not end', 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRetry() {
+    if (!id) return;
+    setBusy(true);
+    try {
+      await retryRequest(id);
+      await load();
+    } catch (e) {
+      Alert.alert('Could not retry', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancel() {
     if (!request) return;
     Alert.alert('Cancel this request?', 'Helpers will no longer be notified.', [
@@ -178,6 +226,114 @@ export default function RequestWaiting() {
       : expiredLocally
         ? 'expired'
         : request.status;
+
+  // ── Group coordination (multi-accept, PRD 4.7) ────────────────────────────
+  if (request.interaction_type === 'group' && status !== 'expired' && status !== 'cancelled') {
+    const joined = participants.filter((p) => p.status !== 'cancelled');
+    const cap = request.participant_cap ?? Math.max(joined.length, 1);
+    const canAddMore = joined.length < cap && request.status === 'open';
+
+    if (request.status === 'completed') {
+      return (
+        <Screen scroll={false}>
+          <View style={styles.center}>
+            <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+            </View>
+            <Text variant="title" center celebrate>
+              Your {categoryLabel} group met!
+            </Text>
+            <Text variant="body" tone="secondary" center style={styles.copy}>
+              {joined.length} {joined.length === 1 ? 'neighbour' : 'neighbours'} joined you.
+              That&apos;s the whole idea.
+            </Text>
+          </View>
+          <View style={styles.footer}>
+            <Button label="Back to home" onPress={() => router.replace('/(main)')} />
+          </View>
+        </Screen>
+      );
+    }
+
+    return (
+      <Screen>
+        <View style={styles.groupHeader}>
+          <Text variant="title" center>
+            Your {categoryLabel} group
+          </Text>
+          <Text variant="body" tone="secondary" center>
+            {joined.length} of {cap} joined
+          </Text>
+        </View>
+
+        {joined.length > 0 ? (
+          <Card style={styles.listCard}>
+            {joined.map((p) => (
+              <View key={p.id} style={styles.personRow}>
+                <PersonAvatar photo={p.other_photo} />
+                <Text variant="body" weight="semibold" style={{ flex: 1 }}>
+                  {p.other_name ?? 'A neighbour'}
+                </Text>
+                <Text variant="small" tone="secondary">
+                  joined
+                </Text>
+              </View>
+            ))}
+          </Card>
+        ) : (
+          <Text variant="body" tone="secondary" center style={styles.copy}>
+            Finding nearby people who want to join…
+          </Text>
+        )}
+
+        {canAddMore && candidate ? (
+          <View style={styles.groupSection}>
+            <Text variant="label" weight="semibold" tone="secondary">
+              People who can join
+            </Text>
+            {candidates.map((c) => (
+              <View key={c.helper_id} style={styles.personRow}>
+                <PersonAvatar photo={c.display_photo_url} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="body" weight="semibold">
+                    {c.display_name ?? 'A verified neighbour'}
+                  </Text>
+                  {c.approx_distance_m != null ? (
+                    <Text variant="small" tone="secondary">
+                      About {distanceLabel(c.approx_distance_m)} away
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  onPress={() => onAddToGroup(c.helper_id)}
+                  disabled={busy}
+                  style={[styles.addPill, { backgroundColor: colors.accent }]}
+                >
+                  <Text variant="label" weight="bold" tone="onAccent">
+                    Add
+                  </Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.footer}>
+          {joined.length > 0 ? (
+            <>
+              <Button
+                label="Group chat"
+                left={<Ionicons name="chatbubbles" size={18} color={colors.onAccent} />}
+                onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: id! } })}
+              />
+              <Button label="End activity" variant="secondary" onPress={onEndGroup} busy={busy} />
+            </>
+          ) : null}
+          <Button label="Cancel request" variant="ghost" onPress={cancel} disabled={busy} />
+        </View>
+      </Screen>
+    );
+  }
 
   // ── Completed ──────────────────────────────────────────────────────────────
   if (status === 'completed' && match) {
@@ -378,12 +534,29 @@ export default function RequestWaiting() {
         <View style={styles.footer}>
           {status === 'open' ? (
             <Button label="Cancel request" variant="secondary" onPress={cancel} busy={busy} />
+          ) : status === 'expired' ? (
+            <>
+              <Button label="Try again" onPress={onRetry} busy={busy} />
+              <Button label="Back to home" variant="secondary" onPress={() => router.replace('/(main)')} />
+            </>
           ) : (
             <Button label="Back to home" onPress={() => router.replace('/(main)')} />
           )}
         </View>
       </View>
     </Screen>
+  );
+}
+
+function PersonAvatar({ photo }: { photo: string | null }) {
+  const { colors } = useTheme();
+  if (photo) {
+    return <Image source={{ uri: photo }} style={styles.personAvatar} contentFit="cover" />;
+  }
+  return (
+    <View style={[styles.personAvatar, styles.avatarFallback, { backgroundColor: colors.accentSoft }]}>
+      <Ionicons name="person" size={20} color={colors.accent} />
+    </View>
   );
 }
 
@@ -424,4 +597,17 @@ const styles = StyleSheet.create({
   meetCard: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.xxl },
   code: { letterSpacing: 8, marginVertical: spacing.xs },
   note: { paddingTop: spacing.xl },
+  groupHeader: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.xl, paddingBottom: spacing.lg },
+  listCard: { gap: spacing.md },
+  groupSection: { gap: spacing.sm, marginTop: spacing.xl },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  personAvatar: { width: 40, height: 40, borderRadius: 20 },
+  addPill: {
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    minHeight: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

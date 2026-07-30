@@ -31,7 +31,11 @@ type Category = {
   icon: string | null;
   typical_urgency: 'casual' | 'everyday' | 'urgent' | 'sos';
   default_timing: 'now' | 'scheduled' | 'either';
+  interaction_type: 'one_to_one' | 'group' | 'either';
 };
+
+const CAP_MIN = 2;
+const CAP_MAX = 8;
 
 type Urgency = 'casual' | 'everyday' | 'urgent';
 type Timing = 'now' | 'scheduled';
@@ -80,13 +84,15 @@ export default function NewRequest() {
   );
   const [urgency, setUrgency] = useState<Urgency>('everyday');
   const [preferWomen, setPreferWomen] = useState(false);
+  const [isGroup, setIsGroup] = useState(false);
+  const [cap, setCap] = useState(4);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from('categories')
-        .select('id, label, icon, typical_urgency, default_timing')
+        .select('id, label, icon, typical_urgency, default_timing, interaction_type')
         .eq('enabled', true)
         .order('label');
       setCategories((data ?? []) as Category[]);
@@ -101,7 +107,11 @@ export default function NewRequest() {
     setUrgency(c.typical_urgency === 'sos' ? 'urgent' : (c.typical_urgency as Urgency));
     setTiming(c.default_timing === 'scheduled' ? 'scheduled' : 'now');
     setScheduledLabel(null);
+    setIsGroup(c.interaction_type === 'group');
+    setCap(4);
   }
+
+  const groupAllowed = category?.interaction_type === 'group' || category?.interaction_type === 'either';
 
   async function send() {
     if (!category || !session) return;
@@ -135,12 +145,19 @@ export default function NewRequest() {
           meetpoint_lng: coords.lng,
           approx_area: locality,
           prefer_women: preferWomen,
+          interaction_type: groupAllowed && isGroup ? 'group' : 'one_to_one',
+          participant_cap: groupAllowed && isGroup ? cap : null,
         })
         .select('id')
         .single();
       if (error) throw error;
 
-      track('request_raised', { category: category.label, urgency, timing });
+      track('request_raised', {
+        category: category.label,
+        urgency,
+        timing,
+        group: groupAllowed && isGroup,
+      });
       router.replace({ pathname: '/request/[id]', params: { id: data.id as string } });
     } catch (e) {
       Alert.alert(
@@ -250,6 +267,49 @@ export default function NewRequest() {
             ))}
           </View>
         </View>
+
+        {groupAllowed ? (
+          <View style={styles.section}>
+            <Text variant="label" weight="semibold" tone="secondary">
+              Just you, or a group?
+            </Text>
+            <View style={styles.chipRow}>
+              <Chip label="Just me" active={!isGroup} onPress={() => setIsGroup(false)} />
+              <Chip label="A group" active={isGroup} onPress={() => setIsGroup(true)} />
+            </View>
+            {isGroup ? (
+              <Card style={styles.capRow}>
+                <View style={{ flex: 1 }}>
+                  <Text variant="body" weight="semibold">
+                    How many people?
+                  </Text>
+                  <Text variant="small" tone="secondary">
+                    Up to {cap} can join.
+                  </Text>
+                </View>
+                <View style={styles.stepper}>
+                  <Pressable
+                    onPress={() => setCap((n) => Math.max(CAP_MIN, n - 1))}
+                    style={[styles.stepBtn, { borderColor: colors.surfaceEdge }]}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="remove" size={20} color={colors.textPrimary} />
+                  </Pressable>
+                  <Text variant="heading" weight="bold" style={styles.capText}>
+                    {cap}
+                  </Text>
+                  <Pressable
+                    onPress={() => setCap((n) => Math.min(CAP_MAX, n + 1))}
+                    style={[styles.stepBtn, { borderColor: colors.surfaceEdge }]}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="add" size={20} color={colors.textPrimary} />
+                  </Pressable>
+                </View>
+              </Card>
+            ) : null}
+          </View>
+        ) : null}
 
         <Card style={styles.preferRow}>
           <View style={{ flex: 1 }}>
@@ -370,5 +430,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   preferRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  capRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xs },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  stepBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  capText: { minWidth: 24, textAlign: 'center', fontVariant: ['tabular-nums'] },
   sendWrap: { gap: spacing.md, marginTop: spacing.sm },
 });

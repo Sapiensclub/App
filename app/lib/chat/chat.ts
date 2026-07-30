@@ -34,6 +34,23 @@ export async function loadMessages(chatId: string): Promise<Message[]> {
   return (data ?? []) as Message[];
 }
 
+/** Map of participant id → first name (for showing who said what in groups). */
+export async function loadParticipantNames(chatId: string): Promise<Record<string, string>> {
+  const { data: parts } = await supabase
+    .from('chat_participants')
+    .select('user_id')
+    .eq('chat_id', chatId);
+  const ids = (parts ?? []).map((p) => p.user_id as string);
+  if (!ids.length) return {};
+  const { data: profs } = await supabase
+    .from('profiles_public')
+    .select('id, display_name')
+    .in('id', ids);
+  const map: Record<string, string> = {};
+  for (const p of profs ?? []) map[p.id as string] = (p.display_name as string) ?? 'Neighbour';
+  return map;
+}
+
 export async function sendText(chatId: string, senderId: string, body: string): Promise<void> {
   const { error } = await supabase
     .from('messages')

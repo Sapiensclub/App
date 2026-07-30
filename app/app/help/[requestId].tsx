@@ -153,9 +153,10 @@ export default function HelperRequest() {
   // ── Confirmed: I'm helping — location released + meetup code ───────────────
   if (state === 'confirmed' && match) {
     const stage = celestialInfo(match.other_stage);
+    const isGroup = match.interaction_type === 'group';
     return (
       <Screen>
-        <TopBar title="You're helping" onBack={() => router.replace('/(main)')} />
+        <TopBar title={isGroup ? "You're in the group" : "You're helping"} onBack={() => router.replace('/(main)')} />
         <View style={styles.confirmHeader}>
           {match.other_photo ? (
             <Image source={{ uri: match.other_photo }} style={styles.avatar} contentFit="cover" />
@@ -165,7 +166,7 @@ export default function HelperRequest() {
             </View>
           )}
           <Text variant="title" center style={{ marginTop: spacing.md }}>
-            {match.other_name ?? 'Your neighbour'}
+            {isGroup ? `${match.other_name ?? 'A neighbour'}'s group` : (match.other_name ?? 'Your neighbour')}
           </Text>
           <View style={styles.stageRow}>
             <Ionicons name={stage.icon} size={16} color={colors.textSecondary} />
@@ -195,17 +196,17 @@ export default function HelperRequest() {
         </Card>
 
         <View style={styles.navWrap}>
-          {/* Status ladder: confirmed → on the way → arrived → done → confirm */}
-          {match.status === 'confirmed' ? (
+          {/* Solo help has a status ladder; a group activity does not. */}
+          {!isGroup && match.status === 'confirmed' ? (
             <Button label="I'm on my way" onPress={() => runStep(helperOnMyWay)} busy={busy} />
           ) : null}
-          {match.status === 'on_the_way' ? (
+          {!isGroup && match.status === 'on_the_way' ? (
             <Button label="I've arrived" onPress={() => runStep(helperArrived)} busy={busy} />
           ) : null}
-          {match.status === 'arrived' && !match.helper_done_at ? (
+          {!isGroup && match.status === 'arrived' && !match.helper_done_at ? (
             <Button label="Mark as done" onPress={() => runStep(helperMarkDone)} busy={busy} />
           ) : null}
-          {match.helper_done_at ? (
+          {!isGroup && match.helper_done_at ? (
             <View style={[styles.waitingBanner, { backgroundColor: colors.accentSoft }]}>
               <ActivityIndicator color={colors.accent} />
               <Text variant="body" weight="semibold" tone="accent" style={{ flex: 1 }}>
@@ -215,20 +216,31 @@ export default function HelperRequest() {
           ) : null}
 
           <Button
-            label={`Message ${match.other_name ?? 'them'}`}
-            variant="secondary"
-            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.accent} />}
+            label={isGroup ? 'Group chat' : `Message ${match.other_name ?? 'them'}`}
+            variant={isGroup ? 'primary' : 'secondary'}
+            left={
+              <Ionicons
+                name={isGroup ? 'chatbubbles' : 'chatbubble-ellipses'}
+                size={18}
+                color={isGroup ? colors.onAccent : colors.accent}
+              />
+            }
             onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: requestId! } })}
           />
           {match.meetpoint_lat != null && match.meetpoint_lng != null && !match.helper_done_at ? (
             <Button
               label="Navigate to meeting point"
-              variant="ghost"
+              variant={isGroup ? 'secondary' : 'ghost'}
               left={<Ionicons name="navigate" size={18} color={colors.accent} />}
               onPress={() =>
                 showLocation({ lat: match.meetpoint_lat!, lng: match.meetpoint_lng! }, 'Meeting point')
               }
             />
+          ) : null}
+          {isGroup ? (
+            <Text variant="small" tone="faint" center>
+              The organizer ends the activity when it&apos;s done.
+            </Text>
           ) : null}
         </View>
       </Screen>

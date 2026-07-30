@@ -55,6 +55,8 @@ export type MatchDetails = {
   category_label: string;
   category_icon: string | null;
   urgency: string;
+  interaction_type: 'one_to_one' | 'group' | 'either';
+  participant_cap: number | null;
   other_id: string;
   other_name: string | null;
   other_photo: string | null;
@@ -94,14 +96,39 @@ export async function confirmHelper(requestId: string, helperId: string): Promis
   return data as string;
 }
 
-/** Load the match for a given request that the current user is part of. */
+/** Load the current user's single match for a request (one-to-one / helper). */
 export async function loadMatchForRequest(requestId: string): Promise<MatchDetails | null> {
   const { data } = await supabase
     .from('match_details')
     .select('*')
     .eq('request_id', requestId)
+    .order('confirmed_at')
+    .limit(1)
     .maybeSingle();
   return (data as MatchDetails) ?? null;
+}
+
+/** All of a request's matches visible to the caller (a seeker sees each group
+ *  participant; a helper sees only their own). */
+export async function loadMatchesForRequest(requestId: string): Promise<MatchDetails[]> {
+  const { data } = await supabase
+    .from('match_details')
+    .select('*')
+    .eq('request_id', requestId)
+    .order('confirmed_at');
+  return (data ?? []) as MatchDetails[];
+}
+
+/** Seeker ends a group activity → all participants complete. */
+export async function groupEnd(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('group_end', { p_request_id: requestId });
+  if (error) throw error;
+}
+
+/** Reopen a dead/expired request and re-broadcast (PRD 3.10). */
+export async function retryRequest(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('retry_request', { p_request_id: requestId });
+  if (error) throw error;
 }
 
 // ── Meeting & completion status transitions (Chunk 5) ──────────────────────
