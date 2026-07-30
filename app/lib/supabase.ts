@@ -23,7 +23,20 @@ function sanitize(key: string) {
   return key.replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-const storage = Platform.OS === 'web' ? AsyncStorage : SecureStorageAdapter;
+// A no-op storage for any non-browser context (e.g. web pre-render in Node,
+// where `window` is undefined). AsyncStorage on web touches window.localStorage,
+// so we only use it once we know we're actually in a browser.
+const memoryStorage = {
+  getItem: async () => null,
+  setItem: async () => {},
+  removeItem: async () => {},
+};
+
+function webStorage() {
+  return typeof window !== 'undefined' ? AsyncStorage : memoryStorage;
+}
+
+const storage = Platform.OS === 'web' ? webStorage() : SecureStorageAdapter;
 
 export const supabase = createClient(
   env.supabaseUrl,
