@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
+import { EditableAvatar } from '@/components/profile/EditableAvatar';
+import { HelperPreferences } from '@/components/profile/HelperPreferences';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
@@ -20,6 +22,7 @@ export default function You() {
   const { profile, loading, refetch } = useProfile();
   const [busy, setBusy] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [waysOpen, setWaysOpen] = useState(false);
 
   const name = profile?.display_name?.trim() || 'Your name';
   const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
@@ -44,10 +47,14 @@ export default function You() {
   return (
     <Screen>
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: colors.accentSoft }]}>
-          <Ionicons name="person" size={40} color={colors.accent} />
-        </View>
-        <Text variant="title" center>
+        {session?.user.id ? (
+          <EditableAvatar
+            userId={session.user.id}
+            photoUrl={profile?.display_photo_url ?? null}
+            onChanged={refetch}
+          />
+        ) : null}
+        <Text variant="title" center style={styles.nameSpace}>
           {name}
         </Text>
         <Text variant="body" tone="secondary" center>
@@ -71,6 +78,18 @@ export default function You() {
           </>
         ) : null}
       </Card>
+
+      <Pressable onPress={() => setWaysOpen(true)} style={styles.linkRow}>
+        <Card style={styles.rowCard}>
+          <View style={styles.row}>
+            <Ionicons name="options-outline" size={20} color={colors.textSecondary} />
+            <Text variant="body" style={{ flex: 1 }}>
+              Ways I help &amp; preferences
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </View>
+        </Card>
+      </Pressable>
 
       {!loading && !profile?.verified ? (
         <View style={styles.verifyCta}>
@@ -98,6 +117,8 @@ export default function You() {
           await refetch();
         }}
       />
+
+      <HelperPreferences visible={waysOpen} onClose={() => setWaysOpen(false)} />
     </Screen>
   );
 }
@@ -139,15 +160,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
   },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
+  nameSpace: { marginTop: spacing.md },
   rowCard: { paddingVertical: spacing.sm },
+  linkRow: { marginTop: spacing.lg },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

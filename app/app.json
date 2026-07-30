@@ -40,7 +40,13 @@
         }
       ],
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sapiens uses your photos so you can set a display photo."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
