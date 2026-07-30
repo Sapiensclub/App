@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
+import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
@@ -16,8 +17,9 @@ import { useTheme } from '@/theme/useTheme';
 export default function You() {
   const { colors } = useTheme();
   const { session, signOut } = useAuth();
-  const { profile, loading } = useProfile();
+  const { profile, loading, refetch } = useProfile();
   const [busy, setBusy] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   const name = profile?.display_name?.trim() || 'Your name';
   const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
@@ -70,6 +72,15 @@ export default function You() {
         ) : null}
       </Card>
 
+      {!loading && !profile?.verified ? (
+        <View style={styles.verifyCta}>
+          <Button label="Verify now" onPress={() => setVerifyOpen(true)} />
+          <Text variant="small" tone="faint" center>
+            Verify to ask for or offer help.
+          </Text>
+        </View>
+      ) : null}
+
       <Text variant="small" tone="faint" center style={styles.note}>
         Your full profile — photo, meters, and journey — arrives in a later
         build phase.
@@ -78,6 +89,15 @@ export default function You() {
       <View style={styles.signOut}>
         <Button label="Sign out" variant="secondary" busy={busy} onPress={onSignOut} />
       </View>
+
+      <VerifyFlow
+        visible={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        onVerified={async () => {
+          setVerifyOpen(false);
+          await refetch();
+        }}
+      />
     </Screen>
   );
 }
@@ -135,6 +155,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   divider: { height: 1 },
+  verifyCta: { paddingTop: spacing.xl, gap: spacing.sm },
   note: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   signOut: { paddingTop: spacing.xxl },
 });

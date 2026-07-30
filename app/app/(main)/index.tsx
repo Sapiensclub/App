@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Button, Card, Screen, Sheet, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
@@ -16,8 +17,9 @@ import { useTheme } from '@/theme/useTheme';
 export default function Home() {
   const { colors } = useTheme();
   const { session } = useAuth();
-  const { profile } = useProfile();
+  const { profile, refetch } = useProfile();
   const [sheet, setSheet] = useState<null | 'need' | 'help'>(null);
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   const firstName =
     profile?.display_name?.trim() ||
@@ -25,6 +27,17 @@ export default function Home() {
     'friend';
   const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
   const uniqueHelps = profile?.unique_helps ?? 0;
+  const verified = profile?.verified ?? false;
+
+  // The disclosure gate (PRD 2.1 / 10.8): looking around is free, but asking
+  // for or offering help requires verification first.
+  function onAction(kind: 'need' | 'help') {
+    if (!verified) {
+      setVerifyOpen(true);
+      return;
+    }
+    setSheet(kind);
+  }
 
   return (
     <Screen>
@@ -76,13 +89,13 @@ export default function Home() {
           hint="Ask a verified neighbour nearby"
           icon="hand-left-outline"
           variant="filled"
-          onPress={() => setSheet('need')}
+          onPress={() => onAction('need')}
         />
         <Tile
           label="Help someone"
           hint="See who needs a hand"
           icon="heart-outline"
-          onPress={() => setSheet('help')}
+          onPress={() => onAction('help')}
         />
       </View>
 
@@ -101,6 +114,15 @@ export default function Home() {
         </Text>
         <Button label="Got it" onPress={() => setSheet(null)} />
       </Sheet>
+
+      <VerifyFlow
+        visible={verifyOpen}
+        onClose={() => setVerifyOpen(false)}
+        onVerified={async () => {
+          setVerifyOpen(false);
+          await refetch();
+        }}
+      />
     </Screen>
   );
 }
