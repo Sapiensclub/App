@@ -50,6 +50,7 @@ function RootNavigator() {
           <Stack.Screen name="(main)" />
           <Stack.Screen name="request" />
           <Stack.Screen name="help" />
+          <Stack.Screen name="chat" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && onboarded === false}>
           <Stack.Screen name="(onboarding)" />

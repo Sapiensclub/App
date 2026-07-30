@@ -189,10 +189,15 @@ export default function RequestWaiting() {
         </Card>
 
         <Text variant="small" tone="faint" center style={styles.note}>
-          Chat and live arrival status arrive in the next build steps.
+          Live arrival status and completion arrive in the next build step.
         </Text>
 
         <View style={styles.footer}>
+          <Button
+            label={`Message ${match.other_name ?? 'helper'}`}
+            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
+            onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: id! } })}
+          />
           <Button label="Back to home" variant="secondary" onPress={() => router.replace('/(main)')} />
         </View>
       </Screen>

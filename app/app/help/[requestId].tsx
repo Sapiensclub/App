@@ -36,7 +36,12 @@ export default function HelperRequest() {
     if (!requestId || !myId) return;
 
     const m = await loadMatchForRequest(requestId);
-    if (m && m.helper_id === myId && m.status !== 'cancelled') {
+    if (m && m.helper_id === myId && m.status === 'cancelled') {
+      // The match I was in was ended (e.g. the seeker used the safety hatch).
+      setState('unavailable');
+      return;
+    }
+    if (m && m.helper_id === myId) {
       setMatch(m);
       setState('confirmed');
       return;
@@ -176,20 +181,26 @@ export default function HelperRequest() {
           {match.approx_area ? <DetailRow icon="map-outline" text={match.approx_area} /> : null}
         </Card>
 
-        {match.meetpoint_lat != null && match.meetpoint_lng != null ? (
-          <View style={styles.navWrap}>
+        <View style={styles.navWrap}>
+          <Button
+            label={`Message ${match.other_name ?? 'them'}`}
+            left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
+            onPress={() => router.push({ pathname: '/chat/[requestId]', params: { requestId: requestId! } })}
+          />
+          {match.meetpoint_lat != null && match.meetpoint_lng != null ? (
             <Button
               label="Navigate to meeting point"
-              left={<Ionicons name="navigate" size={18} color={colors.onAccent} />}
+              variant="secondary"
+              left={<Ionicons name="navigate" size={18} color={colors.accent} />}
               onPress={() =>
                 showLocation({ lat: match.meetpoint_lat!, lng: match.meetpoint_lng! }, 'Meeting point')
               }
             />
-          </View>
-        ) : null}
+          ) : null}
+        </View>
 
         <Text variant="small" tone="faint" center style={styles.note}>
-          Chat, live status and completion arrive in the next build steps.
+          Live status and completion arrive in the next build step.
         </Text>
       </Screen>
     );
@@ -345,6 +356,6 @@ const styles = StyleSheet.create({
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
   meetCard: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.xl },
   code: { letterSpacing: 8, marginVertical: spacing.xs },
-  navWrap: { marginTop: spacing.xl },
+  navWrap: { marginTop: spacing.xl, gap: spacing.md },
   note: { paddingTop: spacing.xl },
 });
