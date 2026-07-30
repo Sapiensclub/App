@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button, Card, Screen, Sheet, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
-import { useProfile } from '@/lib/hooks/useProfile';
+import { useProfile } from '@/lib/profile/ProfileProvider';
 import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 

@@ -6,4 +6,5 @@ export { EmptyState } from './EmptyState';
 export { Screen } from './Screen';
 export { Sheet } from './Sheet';
 export { Text } from './Text';
+export { TextField } from './TextField';
 export { Tile } from './Tile';

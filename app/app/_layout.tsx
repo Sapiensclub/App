@@ -5,20 +5,25 @@ import { useEffect } from 'react';
 
 import { track } from '@/lib/analytics';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
+import { ProfileProvider, useProfile } from '@/lib/profile/ProfileProvider';
 import { useAppFonts } from '@/theme/fonts';
 import { useTheme } from '@/theme/useTheme';
 
-// Keep the native splash up until we know both (a) the brand fonts are loaded
-// and (b) whether there's a saved session — so the app never flashes a
-// fallback font or the sign-in screen at an already-logged-in user.
+// Keep the native splash up until we know the brand fonts are loaded, whether
+// there's a saved session, and (if signed in) whether onboarding is done — so
+// the app never flashes the wrong screen at the user.
 SplashScreen.preventAutoHideAsync();
 
 function RootNavigator() {
   const { session, initializing } = useAuth();
+  const { onboarded } = useProfile();
   const { colors, scheme } = useTheme();
   const [fontsLoaded, fontError] = useAppFonts();
 
-  const ready = !initializing && (fontsLoaded || !!fontError);
+  const signedIn = !!session;
+  const onboardingKnown = !signedIn || onboarded !== null;
+  const ready =
+    !initializing && onboardingKnown && (fontsLoaded || !!fontError);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -39,12 +44,15 @@ function RootNavigator() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        {/* Exactly one group is reachable at a time. When `session` flips,
-            expo-router swaps groups automatically — no manual navigation. */}
-        <Stack.Protected guard={!!session}>
+        {/* Exactly one group is reachable at a time; expo-router swaps groups
+            automatically when session / onboarded flips. */}
+        <Stack.Protected guard={signedIn && onboarded === true}>
           <Stack.Screen name="(main)" />
         </Stack.Protected>
-        <Stack.Protected guard={!session}>
+        <Stack.Protected guard={signedIn && onboarded === false}>
+          <Stack.Screen name="(onboarding)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
@@ -56,7 +64,9 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <RootNavigator />
+      <ProfileProvider>
+        <RootNavigator />
+      </ProfileProvider>
     </AuthProvider>
   );
 }
