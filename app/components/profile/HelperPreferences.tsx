@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,12 +23,14 @@ import { useTheme } from '@/theme/useTheme';
 type Category = { id: string; slug: string; label: string; icon: string | null };
 type QuietHours = { enabled: boolean; start: number; end: number };
 
-const RADIUS_PRESETS = [
-  { m: 1000, label: '1 km' },
-  { m: 3000, label: '3 km' },
-  { m: 5000, label: '5 km' },
-  { m: 10000, label: '10 km' },
-];
+const RADIUS_MIN = 1000;
+const RADIUS_MAX = 10000;
+const RADIUS_STEP = 500;
+
+function kmLabel(m: number): string {
+  const km = m / 1000;
+  return `${Number.isInteger(km) ? km : km.toFixed(1)} km`;
+}
 
 const DEFAULT_QUIET: QuietHours = { enabled: false, start: 22, end: 7 };
 
@@ -191,34 +194,36 @@ export function HelperPreferences({ visible, onClose }: Props) {
             </View>
 
             <View style={styles.section}>
-              <Text variant="heading" weight="bold">
-                Your reach
-              </Text>
+              <View style={styles.reachHeader}>
+                <Text variant="heading" weight="bold" style={{ flex: 1 }}>
+                  Your reach
+                </Text>
+                <Text variant="heading" weight="bold" tone="accent">
+                  {kmLabel(radiusM)}
+                </Text>
+              </View>
               <Text variant="small" tone="secondary">
                 The farthest we will ask you to travel. It can widen for urgent
                 requests.
               </Text>
-              <View style={styles.radiusRow}>
-                {RADIUS_PRESETS.map((r) => {
-                  const on = radiusM === r.m;
-                  return (
-                    <Pressable
-                      key={r.m}
-                      onPress={() => setRadiusM(r.m)}
-                      style={[
-                        styles.radiusChip,
-                        {
-                          backgroundColor: on ? colors.accent : colors.surface,
-                          borderColor: on ? colors.accent : colors.surfaceEdge,
-                        },
-                      ]}
-                    >
-                      <Text variant="label" weight="bold" tone={on ? 'onAccent' : 'secondary'}>
-                        {r.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <Slider
+                style={styles.slider}
+                minimumValue={RADIUS_MIN}
+                maximumValue={RADIUS_MAX}
+                step={RADIUS_STEP}
+                value={radiusM}
+                onValueChange={(v) => setRadiusM(Math.round(v))}
+                minimumTrackTintColor={colors.accent}
+                maximumTrackTintColor={colors.surfaceEdge}
+                thumbTintColor={colors.accent}
+              />
+              <View style={styles.sliderEnds}>
+                <Text variant="small" tone="faint">
+                  1 km
+                </Text>
+                <Text variant="small" tone="faint">
+                  10 km
+                </Text>
               </View>
             </View>
 
@@ -348,14 +353,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   section: { gap: spacing.sm, marginTop: spacing.md },
-  radiusRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
-  radiusChip: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
+  reachHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  slider: { width: '100%', height: 40, marginTop: spacing.sm },
+  sliderEnds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -spacing.xs },
   quietHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   hourRow: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.md },
   stepper: { flex: 1, gap: spacing.xs },

@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { OngoingHelp } from '@/components/help/OngoingHelp';
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -54,6 +55,9 @@ export default function Home() {
           </Text>
         </View>
       </View>
+
+      {/* A way back into any in-progress request or help. */}
+      <OngoingHelp />
 
       {/* Celestial Journey glance — the night surface, impact language. */}
       <Card tone="night" style={styles.journeyCard}>

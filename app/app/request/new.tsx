@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,7 +42,7 @@ const URGENCY_LABELS: Record<Urgency, string> = {
   urgent: 'Right now',
 };
 
-function schedulePresets(): { label: string; when: Date }[] {
+function buildSchedulePresets(): { label: string; when: Date }[] {
   const now = new Date();
   const in1h = new Date(now.getTime() + 60 * 60 * 1000);
   const in3h = new Date(now.getTime() + 3 * 60 * 60 * 1000);
@@ -70,7 +70,14 @@ export default function NewRequest() {
 
   const [description, setDescription] = useState('');
   const [timing, setTiming] = useState<Timing>('now');
-  const [scheduledAt, setScheduledAt] = useState<Date | null>(null);
+  // Presets are built ONCE per screen so the selected time stays stable
+  // (rebuilding each render made the selection never "stick").
+  const presets = useMemo(buildSchedulePresets, []);
+  const [scheduledLabel, setScheduledLabel] = useState<string | null>(null);
+  const scheduledAt = useMemo(
+    () => presets.find((p) => p.label === scheduledLabel)?.when ?? null,
+    [presets, scheduledLabel],
+  );
   const [urgency, setUrgency] = useState<Urgency>('everyday');
   const [preferWomen, setPreferWomen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -93,7 +100,7 @@ export default function NewRequest() {
     // SOS is never in this control — it maps to "Right now".
     setUrgency(c.typical_urgency === 'sos' ? 'urgent' : (c.typical_urgency as Urgency));
     setTiming(c.default_timing === 'scheduled' ? 'scheduled' : 'now');
-    setScheduledAt(null);
+    setScheduledLabel(null);
   }
 
   async function send() {
@@ -185,7 +192,6 @@ export default function NewRequest() {
   }
 
   // ── Step 2: what & when → send ────────────────────────────────────────────
-  const presets = schedulePresets();
   return (
     <Screen>
       <TopBar title={category.label} onBack={() => setCategory(null)} />
@@ -221,8 +227,8 @@ export default function NewRequest() {
                 <Chip
                   key={p.label}
                   label={p.label}
-                  active={scheduledAt?.getTime() === p.when.getTime()}
-                  onPress={() => setScheduledAt(p.when)}
+                  active={scheduledLabel === p.label}
+                  onPress={() => setScheduledLabel(p.label)}
                 />
               ))}
             </View>
