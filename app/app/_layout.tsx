@@ -49,6 +49,7 @@ function RootNavigator() {
         <Stack.Protected guard={signedIn && onboarded === true}>
           <Stack.Screen name="(main)" />
           <Stack.Screen name="request" />
+          <Stack.Screen name="help" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && onboarded === false}>
           <Stack.Screen name="(onboarding)" />

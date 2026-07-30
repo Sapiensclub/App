@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
-import { Button, Card, Screen, Sheet, Text, Tile } from '@/components/ui';
+import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import { useProfile } from '@/lib/profile/ProfileProvider';
@@ -12,14 +12,12 @@ import { spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 // The home screen (PRD 10.4): a calm greeting, a Celestial Journey glance in
-// impact language, an activity glance, and the two big actions. The actions
-// are placeholders in Phase 0 — the raise-help + dispatch flows arrive in
-// Phase 2 — so tapping them opens a gentle "coming soon" sheet.
+// impact language, an activity glance, and the two big actions — which now
+// route into the raise-help flow and the Help-now list (verification gated).
 export default function Home() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { profile, refetch } = useProfile();
-  const [sheet, setSheet] = useState<null | 'help'>(null);
   const [verifyOpen, setVerifyOpen] = useState(false);
 
   const firstName =
@@ -40,7 +38,7 @@ export default function Home() {
     if (kind === 'need') {
       router.push('/request/new'); // the 3-tap raise-help flow
     } else {
-      setSheet('help'); // helper side arrives in Chunk 3
+      router.push('/help'); // the bounded Help-now list
     }
   }
 
@@ -103,17 +101,6 @@ export default function Home() {
           onPress={() => onAction('help')}
         />
       </View>
-
-      <Sheet visible={sheet !== null} onClose={() => setSheet(null)} title="Help someone">
-        <Text variant="body" tone="secondary">
-          This is where you’ll see nearby people who need a hand and offer to
-          help.
-        </Text>
-        <Text variant="small" tone="faint">
-          Coming in the next build phase.
-        </Text>
-        <Button label="Got it" onPress={() => setSheet(null)} />
-      </Sheet>
 
       <VerifyFlow
         visible={verifyOpen}
