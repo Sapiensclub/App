@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { celestialInfo } from '@/lib/celestial';
@@ -93,11 +93,11 @@ export default function ConnectionProfile() {
           label="Message"
           left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
           onPress={() =>
-            Alert.alert('Inbox coming next', 'Messaging your connections arrives in the next build step.')
+            router.push({ pathname: '/connections/inbox/[otherId]', params: { otherId: c.other_id } })
           }
         />
         <Text variant="small" tone="faint" center>
-          The Inbox and directed requests (&ldquo;Ask {c.other_name ?? 'them'} for help&rdquo;) arrive soon.
+          Directed requests (&ldquo;Ask {c.other_name ?? 'them'} for help&rdquo;) arrive next.
         </Text>
       </View>
     </Screen>
