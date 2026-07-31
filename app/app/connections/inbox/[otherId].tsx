@@ -49,6 +49,8 @@ export default function InboxChat() {
   const listRef = useRef<FlatList<Message>>(null);
   const chatId = thread?.chat_id ?? null;
   const frozen = thread?.connection_status === 'disconnected' || !!thread?.closed_at;
+  // No chat row behind this thread yet — don't present a dead input box.
+  const unavailable = !loading && !chatId;
 
   const load = useCallback(async () => {
     if (!otherId) return;
@@ -200,10 +202,10 @@ export default function InboxChat() {
             }}
           />
 
-          {frozen ? (
+          {frozen || unavailable ? (
             <View style={[styles.closedBar, { backgroundColor: colors.surface, borderTopColor: colors.surfaceEdge }]}>
               <Text variant="small" tone="faint" center>
-                This conversation is frozen.
+                {frozen ? 'This conversation is frozen.' : 'This conversation isn’t ready yet.'}
               </Text>
             </View>
           ) : (
