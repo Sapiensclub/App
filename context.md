@@ -1,0 +1,286 @@
+# Sapiens — Build Context & Checkpoint Log
+
+> Living reference for the Sapiens app build. Keep this updated as phases complete.
+> Last updated: after Phase 4, Chunk 2 (the Inbox).
+
+---
+
+## 1. What Sapiens is
+
+A hyperlocal **mutual-aid** mobile app (India-first): verified real people help each
+other **in person, for free**. The constitution (non-negotiable, enforced in DATA not
+just UI):
+1. **No money for help, ever.**
+2. **No profile surfing** — info about others is *earned step by step* (staged
+   disclosure via RLS + disclosure views).
+3. **Everyone is a verified real human** before giving/receiving help (KYC gate).
+4. **Trust is the product** — any feature eroding it is wrong.
+5. **Never endanger the person we're protecting** (safety design > safety theatre).
+6. **No attention-farming** — no feeds, streaks, dopamine loops (anti-addiction rules
+   are hard/permanent).
+
+Source docs live in `docs/`:
+- `docs/Sapiens_App_MVP_Build_Spec.pdf` — the build spec (phases §7, schema §3, stack).
+- `docs/Sapiens PRD.pdf` — full behavioural design (Buckets 0–11, phase-tagged).
+Website design system source: `C:\Users\KIIT\sapiens\Sapiens_Build_Spec_v2_for_Claude_Code.md` §2.
+
+We build **P1 only**, strictly in the spec's §7 phase order, **one chunk at a time**,
+stopping for owner testing after each. P2/LATER items are NOT built — only
+architectural hooks are left.
+
+---
+
+## 2. Owner / working style
+
+- **Solo founder, not an expert mobile dev.** Explain plainly; small chunks; after each
+  chunk STOP, explain what was built + exact test steps, wait for confirmation.
+- Prefer clear, maintainable code over clever code.
+- **Never print secret values.** Owner pastes keys into `.env.local` themselves.
+- Owner's terminal is **Windows PowerShell 5.1** — no `&&` (use `;`), quote paths with
+  spaces. Dev machine: Windows 11, Node 22, git.
+- Owner has: Supabase project, GitHub repo **https://github.com/Sapiensclub/App**, Expo
+  account, Expo Go on **iPhone 17 / iOS 26**.
+- After each committed chunk we push to GitHub.
+- Commit messages: **avoid embedded double-quotes/backticks** (PowerShell here-string
+  breaks arg parsing). End commit messages with `Co-Authored-By: Claude Fable 5 ...`.
+
+---
+
+## 3. Stack & architecture
+
+- **Monorepo**: `/app` (Expo RN + expo-router + TS), `/admin` (Next.js stub — real
+  dashboard is Phase 7), `/supabase` (migrations, functions, seed), `/docs`.
+- **App pinned to Expo SDK 54** (template `default@sdk-54`) — the App Store Expo Go
+  supports SDK 54 only; `create-expo-app@latest` gives SDK 57 which Expo Go can't load.
+  **Do not upgrade the Expo SDK until Expo Go supports it.**
+- Web output = **`single`** (client-only SPA) in `app.json` — NOT `static` (static
+  pre-renders in Node where `window` is undefined → crash). The web build is our
+  **second test user** (press `w` in expo).
+- Backend: **Supabase** (Postgres/RLS/Realtime/Auth/Storage/PostGIS). Analytics:
+  **PostHog** (wired, key not yet added — deferred). Push: Expo Push (Phase 2+; needs a
+  dev build, Expo Go can't receive push).
+- Design: warm paper/ink/spark-orange + celestial night. **Nunito Sans** for all UI,
+  **Cabin Sketch** for display/headlines/celebratory. Exact website palette (verified
+  against live site): paper `#F7F4EC`, ink `#141414`, spark `#F59E2D`, night `#17142E`,
+  gold `#F0C078`, moonlight `#CDD6FF`, clay `#D85A30`. Hand-drawn "wobble" button
+  corners. 70-year-old accessibility test (big targets, high contrast).
+- **Light + dark themes** via `useTheme()` reading system color scheme; `theme/tokens.ts`
+  has `lightColors`/`darkColors` (semantic keys) + spacing/radius/fonts/type.
+- Component kit in `app/components/ui/`: Screen, Button, Card, Tile, Sheet, Text,
+  TextField, EmptyState. Logo (footprint-S) rendered via react-native-svg from
+  `logo.svg`, theme-aware.
+- Realtime: **all `postgres_changes` subscriptions go through `app/lib/realtime.ts`
+  `useRealtime()` hook** — unique channel name per subscribe, effect keyed only on the
+  subscription shape, callback via ref. (Fixed the "cannot add postgres_changes
+  callbacks after subscribe()" crash class.)
+- Env files (gitignored): `app/.env.local` (EXPO_PUBLIC_SUPABASE_URL + PUBLISHABLE_KEY +
+  POSTHOG_KEY[empty] + POSTHOG_HOST), `admin/.env.local` (NEXT_PUBLIC_* + SUPABASE_SERVICE_KEY),
+  `supabase/.env.local` (EXPO_ACCESS_TOKEN + KYC/SMS keys — all empty/later).
+
+---
+
+## 4. Progress — phases done
+
+### Phase 0 — Foundation ✅
+Monorepo, full schema (~20 tables) + RLS enforcing the constitution + `profiles_public`
+view (the staged-disclosure boundary) + PostGIS. Auth = **email + password** (owner's
+choice for easy testing; behind an AuthProvider seam so swapping to OTP later is small;
+requires Supabase "Confirm email" OFF). Phone OTP **stubbed** (`app/lib/auth/phoneOtp.ts`).
+Themed light/dark component kit + logo. Four-tab home (Home/Moments/Inbox/You). PostHog
+wired (no-ops without key). Sessions persist via expo-secure-store.
+
+### Phase 1 — Identity & profile ✅
+Onboarding flow (walkthrough + trusted contacts + welcome). **Mock KYC gate**
+(`apply_mock_kyc` RPC + `KycProvider` seam in `app/lib/kyc/`; real vendor swaps one file).
+Display photo via `avatars` Storage bucket + `set_display_photo` RPC (face-match
+**stubbed** to auto-accept). 8 parent categories seeded. Ways-I-help + helper prefs
+(reach slider 1–10km, quiet hours, category suggestions). Assembled You tab (edit
+profile, trusted-contacts editor).
+
+### Phase 2 — THE SPINE ✅ (the core product)
+- **Location** (`app/lib/location/locationProvider.ts`): the one seam — GPS, locality
+  reverse-geocode, distance/ETA, `showLocation()` deep-links to external maps (no Map
+  API v1). `useLocationSync` keeps helper location fresh while app open.
+- **Dispatch engine** (SQL, SECURITY DEFINER): `dispatch_wave` (PostGIS radius grows per
+  wave, category opt-in, verified, not mid-help, not quiet hours, not blocked,
+  prefer-women soft pre-order, nearest-first + **load-rotation fairness — never badge**,
+  daily ping cap), `dispatch_tick` (widen waves, expire, lapse re-broadcast,
+  auto-confirm). Trigger pings wave 1 on request create. Proved via
+  `app/scripts/dispatch-harness.mjs`. Tunables live in `dispatch_config` table (data,
+  not code).
+- **Raise-help flow** (3 taps): category grid → what/when (Now/Scheduled presets,
+  urgency pre-filled, prefer-women, **group option + participant cap**) → send.
+  Waiting screen (live, honest, expiry countdown, cancel, Try-again).
+- **Staged disclosure enforced in DATA** via SECURITY DEFINER views: `helper_pings`
+  (limited pre-accept info, no seeker id/coords), `request_candidates` (seeker sees
+  PRD 9.4 fields of a raised hand), `match_details` (precise meetpoint released ONLY
+  post-confirm; also helper live distance for seeker ETA).
+- **Match flow**: Help-now bounded list, "I'll help" (`raise_hand`), seeker
+  Confirm/Decline (veto, not pick — `confirm_helper`/`veto_helper`), meetup code.
+- **Active-request chat**: text only (photos/voice deferred), realtime, server-readable;
+  **Cancel+Report+Block** hatch (`cancel_report_block` — terminates match, files report
+  w/ chat evidence, blocks pair, re-broadcasts).
+- **Meeting & completion**: helper on-my-way→arrived→mark-done ladder; seeker sees
+  status + ETA text ("~400m · ~6 min", never a live dot); seeker confirm or auto-confirm;
+  chat dissolves; group activities `group_end`.
+- **Group scheduled requests**: multi-accept up to cap, shared group chat (sender names),
+  seeker ends activity.
+- `OngoingHelp` card on Home = way back into any in-progress request/match.
+
+### Phase 3 — Reward & reputation ✅
+- **Moneta engine**: `award_on_completion` trigger — on match completion, helper earns
+  1 Moneta **only on FIRST-EVER help with a person** (unique-help rule, PRD 7.1);
+  append-only ledger + partial unique index make a 2nd award per pair impossible.
+  Recomputes unique_helps, total_helps (steadfast, incl. repeats), moneta, celestial
+  stage, goodness = 100·(1−e^(−unique/280)). Proved via `moneta-harness.mjs`. The person
+  *helped* earns nothing.
+- **Double-blind ratings**: `on_rating_submitted` trigger reveals both only when both
+  submit, then recomputes each Trust avg. Rate screen (stars + note).
+- **Three meters + Celestial Journey** on You tab: SVG moon→sun (`components/journey/`),
+  Goodness gauge (responsive), Trust stars, milestone dots, impact numbers.
+- **Monthly leaderboard**: `leaderboard_month` view — new unique people reached this
+  month, ranked by uniques (not raw count). Global (area filters need stored user area —
+  later). Screen from You tab.
+
+### Phase 4 — Connections & inbox (IN PROGRESS)
+- **Chunk 1 ✅ — Connect offer**: double opt-in (`connect_offer`/`connect_decline`),
+  rating-gated (both ≥3★, only shown after both rate), 7-day expiry, silent decline.
+  `my_connections` view (private graph, PRD 5.7). Connections list + fuller profile;
+  You tab entry with count. **Bug fixed**: `connect_offer` CASE status must cast to
+  `::connection_status` enum.
+- **Chunk 2 ✅ — the Inbox**: inbox chat opens on connection + active-request messages
+  **carry over**; `my_inbox` view (threads, last msg, unread); nicknames
+  (`connection_nicknames`); `disconnect_connection` (silent, freeze), `block_connection`
+  (freeze + hard block), `mark_chat_read`. Inbox tab + inbox chat screen (rename/
+  disconnect/block, frozen state).
+- **Chunk 3 (NEXT) — directed requests + connections wave**: "Ask [name] for help"
+  (routes to one connection, falls back to open dispatch, disclosure ladder collapses,
+  PRD 5.5); connections wave (connections pinged BEFORE wave 1 on a general request,
+  PRD 5.6). This completes Phase 4.
+
+---
+
+## 5. Phases remaining (P1)
+
+- **Phase 4 Chunk 3** — directed requests + connections wave (completes Phase 4).
+- **Phase 5 — SOS**: guarded button (press-hold/slide), trusted-contact SMS alerts +
+  live-location link (Layer 1), one-tap 112 (Layer 2), soft daily limit + accountability
+  + are-you-safe, offline degradation. (Layer 3 community responders is [P2].)
+- **Phase 6 — Community & notifications**: finite community-moments (anti-addiction hard
+  rules — bottom, no infinite scroll, "you're all caught up"), double-opt-in area-scoped
+  selfies, milestones in-feed, ❤️ appreciate (count hidden), aggregate activity map,
+  notifications bell, warm empty states. **Milestone notifications (PRD 5.8) deferred to
+  here** (needs the bell surface).
+- **Phase 7 — Admin / Trust & Safety dashboard** (Next.js): resolve reports, read
+  flagged active-request chats, ban/suspend, approve category suggestions.
+- **Phase 8 — Hardening & store prep**: accessibility pass, security/RLS review,
+  notification budgets/caps, data-retention purge jobs, mid-range Android perf, store
+  assets + App Store safety-review readiness.
+
+---
+
+## 6. Deliberately deferred (still owed within P1)
+
+- **Chat photos + voice notes** (PRD 4.4/6.6) — active-request AND inbox chats are
+  text-only so far. Voice notes matter for accessibility. Small follow-up.
+- **Leaderboard area filters** (zip/city/state/country) — need a stored user "home area";
+  v1 is global (fine for closed-community launch).
+- **Milestone notifications to connections** (PRD 5.8) — Phase 6 with the bell.
+
+---
+
+## 7. Stubs / seams for real vendors (P1 mocks, swap later)
+
+- **KYC**: `app/lib/kyc/kycProvider.ts` `KycProvider` interface + `StubKycProvider`;
+  `apply_mock_kyc` RPC flips verified server-side. Real vendor (Aadhaar/DL + liveness)
+  swaps one file. Face-match against KYC selfie stubbed (auto-accept) in
+  `set_display_photo`.
+- **Phone OTP**: `app/lib/auth/phoneOtp.ts` stub; real SMS + DLT later (with KYC).
+- **SMS provider / DLT**: not chosen; needed for phone OTP + SOS SMS.
+
+---
+
+## 8. P2 / LATER — DO NOT BUILD (leave hooks only)
+
+[P2]: Premium Choice (seeker picks helper) · masked calling · SOS Layer 3 community
+responders · E2E inbox + client-side reporting · retroactive help-logging · voice-input
+category/sentiment · anti-collusion layer · embedded map · real-world Moneta redemption.
+[LATER]: formal background checks · behavioural trust gates · direct DigiLocker · cash
+rewards/City Saviour tooling · Hindi/regional (keep i18n-ready) · disappearing messages ·
+arbitrary group chats · comments.
+[GATE — blocks public launch]: legal entity, liability/ToS, DPDP, POCSO, IT Rules,
+insurance, Moneta-redemption regulation (§2.4 G1–G7); App Store review; DLT SMS
+registration. **Owner + lawyer tasks, not code.**
+
+---
+
+## 9. Operational gotchas & how-tos (IMPORTANT)
+
+- **pg_cron must be enabled** for the dispatch tick to run (widen waves, expire requests,
+  lapse, auto-confirm). Enable: Supabase Dashboard → Database → Extensions → `pg_cron`
+  ON, then SQL editor:
+  `select cron.schedule('sapiens-dispatch-tick', '* * * * *', 'select public.dispatch_tick();');`
+  Without it: requests never expire → stuck "open" shown as "expired" in UI; no later
+  waves. (This caused the "can't cancel / not matching" issues.)
+- **Testing a match needs the helper findable BEFORE the request is raised**: verified +
+  category in Ways-I-help + location synced (open "Help someone" first to sync). Both
+  test accounts at same location → distance ~0.
+- **Don't Cancel+Report+Block between the two main test accounts** — it *permanently*
+  blocks the pair (by design); they'll never match again. Clear via reset if needed.
+- **Migrations**: owner runs `npx supabase db push` (needs DB password; CLI already
+  linked). `create or replace view` can't insert columns mid-list → use DROP+CREATE.
+  Supabase blocks bare UPDATE/DELETE without WHERE (even inside functions) → always add
+  a WHERE. Enum columns need explicit `::enum_type` cast when set from a CASE of text.
+- **expo-router typed routes**: adding a new route makes `tsc` fail on the path literal
+  until types regen. Regen by running the dev server briefly (background `expo start`,
+  wait for `.expo/types/router.d.ts`, kill). `expo export` does NOT regen them.
+- **Every chunk**: `tsc --noEmit` + `expo export --platform ios` (bundle check) before
+  commit. Restart dev server with `npx expo start -c` after native/config changes.
+- **Fully restart the app** (kill Expo Go + `expo start -c`) after data resets — the app
+  caches stale requests/matches otherwise.
+
+---
+
+## 10. Dev scripts (in `app/scripts/`, run from `app/` with `node scripts/<x>.mjs`)
+
+All read Supabase URL + **service key** from `../admin/.env.local`; never print secrets.
+- `dispatch-harness.mjs` — seeds helpers around a point, proves the dispatch engine
+  (eligibility, radius growth, prefer-women). Cleans up.
+- `moneta-harness.mjs` — proves the unique-help rule (repeat earns nothing).
+- `connect-harness.mjs` — proves connect_offer end-to-end as two real users.
+- `diagnose-help.mjs` — READ-ONLY: blocks, matches by status, requests by status, helper
+  location/verified state. Run this first when matching misbehaves.
+- `reset-help-data.mjs` — full fresh slate: calls `admin_reset_help_data` (TRUNCATEs past
+  the append-only ledger — normal deletes are blocked by design), resets reputation
+  counters + locations, removes leftover `@sapiens.test` seed accounts. **Keeps** real
+  profiles, Ways-I-help, trusted contacts.
+- `preview-journey.mjs <email> <n>` — sets a profile's unique-helps to see the moon/sun
+  at any stage (DEV visual only; run with 0 to reset).
+
+**`admin_reset_help_data` (SQL function) is DEV/STAGING ONLY — REMOVE before launch**
+(add to pre-launch checklist; it truncates all help data).
+
+---
+
+## 11. Current DB state (as of this checkpoint)
+
+Help data was fully reset (0 requests, 0 matches, seed accounts removed). Real accounts:
+- `pragamankumar@gmail.com` — verified, 8 categories, radius 10km.
+- `sapiensclub1@gmail.com` — verified, 8 categories, radius 5km.
+- `pragaman@noboruworld.com` — NOT verified.
+No blocks. pg_cron: **enable it** if not already (see §9).
+
+---
+
+## 12. Key product decisions locked (so we don't re-litigate)
+
+- Auth Phase 0 = email+password (not OTP) for testing.
+- KYC + face-match + phone OTP = mocked behind clean seams.
+- Moneta rewards the **helper** only, flat 1, unique-pair only; append-only ledger.
+- Goodness curve k = 280. Celestial ladder: new moon 0 · crescent 10 · half 50 · full
+  100 · sunrise 500 · golden sun 1000.
+- Ratings double-blind; Connect offer rating-gated (both ≥3★), double opt-in, silent
+  decline, 7-day expiry.
+- Active-request chat carries over into the inbox on connection.
+- Dispatch never ranks by badge/reputation — nearest-first + fairness only.
+- Leaderboard ranks by unique people (never raw count); global for now.
