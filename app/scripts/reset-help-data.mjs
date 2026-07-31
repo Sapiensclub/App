@@ -1,11 +1,12 @@
 // ============================================================================
 // Sapiens — reset help data (dev tool)
 // ============================================================================
-// Deletes all transactional "help" rows (requests, matches, chats, messages,
-// dispatch, responses, ratings, moneta, reports, blocks, connections, moments,
-// sos, notifications) while KEEPING profiles, helper_preferences (Ways I help
-// + location), trusted_contacts, categories, and config.
+// Wipes all transactional "help" rows and resets reputation counters (via the
+// admin_reset_help_data function, which TRUNCATEs past the append-only ledger),
+// while KEEPING profiles, helper_preferences (Ways I help), and trusted_contacts.
+// Also removes leftover @sapiens.test seed accounts.
 //
+// Requires the 20260731150000_dev_reset_function migration.
 // Run from app/:  node scripts/reset-help-data.mjs
 // ============================================================================
 import { createClient } from '@supabase/supabase-js';
@@ -25,43 +26,31 @@ const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_KEY, 
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const ZERO = '00000000-0000-0000-0000-000000000000';
-
-// (table, id-column) — order respects the non-cascading foreign keys
-// (reports -> chats, moneta_ledger -> matches must go first).
-const STEPS = [
-  ['reports', 'id'],
-  ['moneta_ledger', 'id'],
-  ['ratings', 'id'],
-  ['messages', 'id'],
-  ['matches', 'id'],
-  ['dispatch_targets', 'id'],
-  ['request_responses', 'id'],
-  ['chats', 'id'],
-  ['requests', 'id'],
-  ['blocks', 'blocker_id'],
-  ['connections', 'id'],
-  ['appreciations', 'moment_id'],
-  ['moments', 'id'],
-  ['sos_events', 'id'],
-  ['notifications', 'id'],
-];
-
 async function main() {
   console.log('=== Resetting help data (profiles kept) ===\n');
-  for (const [table, col] of STEPS) {
-    const { count } = await sb.from(table).select('*', { count: 'exact', head: true });
-    const { error } = await sb.from(table).delete().neq(col, ZERO);
-    if (error) console.log(`  FAIL  ${table.padEnd(20)} ${error.message}`);
-    else console.log(`  cleared ${table.padEnd(20)} (${count ?? 0} rows)`);
+
+  const { error } = await sb.rpc('admin_reset_help_data');
+  if (error) {
+    console.log('FAILED:', error.message);
+    console.log('(Did you push the 20260731150000_dev_reset_function migration?)');
+    return;
   }
-  // Clear each helper's last location so nobody is "findable" from stale data.
-  await sb
-    .from('helper_preferences')
-    .update({ last_location: null, location_updated_at: null })
-    .neq('user_id', ZERO);
-  console.log('\nCleared stale helper locations too.');
-  console.log('\n=== done — profiles, Ways I help, and trusted contacts kept ===');
+  console.log('Cleared all requests, matches, chats, ledger, ratings, connections,');
+  console.log('blocks, etc. Reset reputation counters + helper locations.');
+
+  // Remove leftover seed/harness test accounts (email @sapiens.test).
+  const { data: list } = await sb.auth.admin.listUsers({ perPage: 1000 });
+  let removed = 0;
+  for (const u of list?.users ?? []) {
+    if (u.email?.endsWith('@sapiens.test')) {
+      try {
+        await sb.auth.admin.deleteUser(u.id);
+        removed++;
+      } catch {}
+    }
+  }
+  console.log(`Removed ${removed} leftover @sapiens.test test accounts.`);
+  console.log('\n=== done — real profiles, Ways I help, and trusted contacts kept ===');
 }
 
 main().catch((e) => console.error('RESET ERROR:', e.message ?? e));
