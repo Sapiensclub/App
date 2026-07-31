@@ -1,7 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { CelestialJourney } from '@/components/journey/CelestialJourney';
+import { GoodnessGauge } from '@/components/journey/GoodnessGauge';
+import { TrustStars } from '@/components/journey/TrustStars';
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { EditableAvatar } from '@/components/profile/EditableAvatar';
 import { EditProfile } from '@/components/profile/EditProfile';
@@ -9,7 +13,7 @@ import { HelperPreferences } from '@/components/profile/HelperPreferences';
 import { TrustedContactsEditor } from '@/components/profile/TrustedContactsEditor';
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { celestialInfo } from '@/lib/celestial';
+import { celestialInfo, journeyProgress, MILESTONES } from '@/lib/celestial';
 import { useProfile } from '@/lib/profile/ProfileProvider';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -33,12 +37,16 @@ export default function You() {
 
   const [waysLabels, setWaysLabels] = useState<string[]>([]);
 
+  const { width } = useWindowDimensions();
+  const journeyWidth = Math.min(width - spacing.xl * 2 - spacing.xl * 2, 320);
+
   const uid = session?.user.id;
   const name = profile?.display_name?.trim() || 'Your name';
   const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
   const verified = profile?.verified ?? false;
   const uniqueHelps = profile?.unique_helps ?? 0;
   const totalHelps = profile?.total_helps ?? 0;
+  const journey = journeyProgress(uniqueHelps);
   const memberSince = profile?.member_since
     ? new Date(profile.member_since).toLocaleDateString(undefined, {
         month: 'long',
@@ -70,6 +78,15 @@ export default function You() {
   useEffect(() => {
     loadWays();
   }, [loadWays]);
+
+  // Refresh profile counters + meters whenever the tab regains focus (e.g.
+  // after completing a help).
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      loadWays();
+    }, [refetch, loadWays]),
+  );
 
   async function onSignOut() {
     setBusy(true);
@@ -111,18 +128,72 @@ export default function You() {
         ) : null}
       </View>
 
-      {/* Impact — framing over raw numbers (PRD 9.3) */}
-      <Card tone="night" style={styles.impactCard}>
-        <Text variant="small" tone="moonlight">
-          Your impact
+      {/* The Celestial Journey — the Spiritual meter (PRD 7.7/7.8) */}
+      <Card tone="night" style={styles.journeyCard}>
+        <CelestialJourney unique={uniqueHelps} width={journeyWidth} />
+        <Text variant="title" celebrate center style={{ color: colors.moonlightStrong }}>
+          {journey.label}
         </Text>
-        <Text variant="heading" weight="bold" style={{ color: colors.moonlightStrong }}>
+        <Text variant="body" tone="moonlight" center>
           {uniqueHelps === 0
             ? 'Your first help lights the way'
             : `You've reached ${uniqueHelps} ${uniqueHelps === 1 ? 'neighbour' : 'neighbours'}`}
         </Text>
+        {journey.next != null ? (
+          <>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.round(journey.fraction * 100)}%` }]} />
+            </View>
+            <Text variant="small" tone="moonlight" center>
+              {journey.next - uniqueHelps} more to {journey.nextLabel}
+            </Text>
+          </>
+        ) : (
+          <Text variant="small" tone="moonlight" center>
+            You&apos;ve joined the galaxy ✦
+          </Text>
+        )}
+        {/* Milestone dots */}
+        <View style={styles.milestoneRow}>
+          {MILESTONES.map((m) => {
+            const reached = uniqueHelps >= m;
+            return (
+              <View key={m} style={styles.milestone}>
+                <View
+                  style={[
+                    styles.milestoneDot,
+                    { backgroundColor: reached ? colors.gold : 'rgba(205,214,255,0.25)' },
+                  ]}
+                />
+                <Text variant="small" style={{ color: reached ? colors.gold : colors.moonlight, opacity: reached ? 1 : 0.6 }}>
+                  {m}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+
+      {/* Trust + Goodness meters */}
+      <View style={styles.metersRow}>
+        <Card style={styles.meterCard}>
+          <Text variant="small" tone="secondary" center>
+            Trust
+          </Text>
+          <TrustStars avg={profile?.trust_rating_avg ?? null} />
+        </Card>
+        <Card style={styles.meterCard}>
+          <Text variant="small" tone="secondary" center>
+            Goodness
+          </Text>
+          <GoodnessGauge score={profile?.goodness_score ?? 0} />
+        </Card>
+      </View>
+
+      {/* Impact numbers — framing over raw counts (PRD 9.3) */}
+      <Card style={styles.rowCard}>
         <View style={styles.statsRow}>
-          <Stat value={uniqueHelps} label="Neighbours reached" />
+          <Stat value={uniqueHelps} label="Neighbours" />
           <StatDivider />
           <Stat value={totalHelps} label="Total helps" />
           <StatDivider />
@@ -208,10 +279,6 @@ export default function You() {
         </View>
       ) : null}
 
-      <Text variant="small" tone="faint" center style={styles.note}>
-        Your meters and journey timeline arrive with the reward phase.
-      </Text>
-
       <View style={styles.signOut}>
         <Button label="Sign out" variant="secondary" busy={busy} onPress={onSignOut} />
       </View>
@@ -244,17 +311,12 @@ export default function You() {
 }
 
 function Stat({ value, label }: { value: number; label: string }) {
-  const { colors } = useTheme();
   return (
     <View style={styles.stat}>
-      <Text
-        variant="heading"
-        weight="extrabold"
-        style={{ color: colors.gold, fontVariant: ['tabular-nums'] }}
-      >
+      <Text variant="title" weight="extrabold" tone="accent" style={{ fontVariant: ['tabular-nums'] }}>
         {value}
       </Text>
-      <Text variant="small" tone="moonlight" center>
+      <Text variant="small" tone="secondary" center>
         {label}
       </Text>
     </View>
@@ -263,7 +325,7 @@ function Stat({ value, label }: { value: number; label: string }) {
 
 function StatDivider() {
   const { colors } = useTheme();
-  return <View style={[styles.statDivider, { backgroundColor: colors.nightEdge }]} />;
+  return <View style={[styles.statDivider, { backgroundColor: colors.surfaceEdge }]} />;
 }
 
 function Row({
@@ -333,11 +395,30 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   bio: { maxWidth: 320, marginTop: spacing.xs },
-  impactCard: { gap: spacing.sm },
+  journeyCard: { alignItems: 'center', gap: spacing.sm },
+  progressTrack: {
+    alignSelf: 'stretch',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(205,214,255,0.2)',
+    overflow: 'hidden',
+    marginTop: spacing.xs,
+  },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: '#F0C078' },
+  milestoneRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    marginTop: spacing.md,
+  },
+  milestone: { alignItems: 'center', gap: 4 },
+  milestoneDot: { width: 8, height: 8, borderRadius: 4 },
+  metersRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+  meterCard: { flex: 1, alignItems: 'center', gap: spacing.sm, justifyContent: 'flex-start' },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
   },
   stat: { flex: 1, alignItems: 'center', gap: spacing.xs },
   statDivider: { width: 1, marginVertical: spacing.xs },

@@ -1,7 +1,5 @@
-// Maps the stored celestial_stage enum to a friendly label + icon.
 // The Celestial Journey (PRD 7.8): new moon → crescent → half → full →
-// sunrise → golden sun → galaxy, driven by unique helps. Phase 3 builds the
-// full visual; this is just the label used on the Home glance and You tab.
+// sunrise → golden sun, driven by unique helps (people reached).
 import type { Ionicons } from '@expo/vector-icons';
 
 type StageInfo = { label: string; icon: keyof typeof Ionicons.glyphMap };
@@ -18,4 +16,47 @@ const STAGES: Record<string, StageInfo> = {
 
 export function celestialInfo(stage: string): StageInfo {
   return STAGES[stage] ?? STAGES.new_moon;
+}
+
+// Ordered stages with the unique-help threshold that unlocks each.
+export const STAGE_LADDER: { key: string; at: number }[] = [
+  { key: 'new_moon', at: 0 },
+  { key: 'crescent', at: 10 },
+  { key: 'half_moon', at: 50 },
+  { key: 'full_moon', at: 100 },
+  { key: 'sunrise', at: 500 },
+  { key: 'golden_sun', at: 1000 },
+];
+
+// Milestones that ripple out to your connections (PRD 8.5).
+export const MILESTONES = [1, 3, 10, 50, 100, 500, 1000];
+
+export type JourneyProgress = {
+  stageKey: string;
+  label: string;
+  /** Threshold of the current stage. */
+  current: number;
+  /** Next stage threshold, or null at the top. */
+  next: number | null;
+  nextLabel: string | null;
+  /** 0..1 progress from the current stage to the next. */
+  fraction: number;
+};
+
+export function journeyProgress(unique: number): JourneyProgress {
+  let idx = 0;
+  for (let i = 0; i < STAGE_LADDER.length; i++) {
+    if (unique >= STAGE_LADDER[i].at) idx = i;
+  }
+  const cur = STAGE_LADDER[idx];
+  const nxt = STAGE_LADDER[idx + 1] ?? null;
+  const fraction = nxt ? Math.min(1, (unique - cur.at) / (nxt.at - cur.at)) : 1;
+  return {
+    stageKey: cur.key,
+    label: STAGES[cur.key].label,
+    current: cur.at,
+    next: nxt?.at ?? null,
+    nextLabel: nxt ? STAGES[nxt.key].label : null,
+    fraction,
+  };
 }

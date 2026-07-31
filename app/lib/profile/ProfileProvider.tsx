@@ -22,13 +22,15 @@ export type MyProfile = {
   total_helps: number;
   moneta_lifetime: number;
   moneta_balance: number;
+  trust_rating_avg: number | null;
+  goodness_score: number;
   member_since: string;
   verified: boolean;
   onboarded_at: string | null;
 };
 
 const COLUMNS =
-  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, moneta_lifetime, moneta_balance, member_since, verified, onboarded_at';
+  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, moneta_lifetime, moneta_balance, trust_rating_avg, goodness_score, member_since, verified, onboarded_at';
 
 type ProfileContextValue = {
   profile: MyProfile | null;
