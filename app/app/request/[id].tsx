@@ -541,7 +541,7 @@ export default function RequestWaiting() {
           ) : status === 'expired' ? (
             <>
               <Button label="Try again" onPress={onRetry} busy={busy} />
-              <Button label="Back to home" variant="secondary" onPress={() => router.replace('/(main)')} />
+              <Button label="Cancel request" variant="secondary" onPress={cancel} busy={busy} />
             </>
           ) : (
             <Button label="Back to home" onPress={() => router.replace('/(main)')} />
