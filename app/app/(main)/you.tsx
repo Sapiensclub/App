@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
@@ -200,6 +200,19 @@ export default function You() {
           <Stat value={profile?.moneta_lifetime ?? 0} label="Moneta" />
         </View>
       </Card>
+
+      {/* Monthly leaderboard */}
+      <Pressable onPress={() => router.push('/leaderboard')}>
+        <Card style={styles.rowCard}>
+          <View style={styles.row}>
+            <Ionicons name="trophy-outline" size={20} color={colors.textSecondary} />
+            <Text variant="body" style={{ flex: 1 }}>
+              This month&apos;s leaderboard
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </View>
+        </Card>
+      </Pressable>
 
       {/* Ways I help glance */}
       <Pressable onPress={() => setWaysOpen(true)}>
