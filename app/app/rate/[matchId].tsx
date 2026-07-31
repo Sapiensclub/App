@@ -7,6 +7,12 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 import { Button, Card, Screen, Text, TextField } from '@/components/ui';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import {
+  connectDecline,
+  connectOffer,
+  loadConnectionWith,
+  type Connection,
+} from '@/lib/connections';
 import { loadMatchById, type MatchDetails } from '@/lib/help/matching';
 import {
   loadMyRating,
@@ -27,11 +33,13 @@ export default function RateScreen() {
   const [match, setMatch] = useState<MatchDetails | null>(null);
   const [mine, setMine] = useState<Rating | null>(null);
   const [aboutMe, setAboutMe] = useState<Rating | null>(null);
+  const [connection, setConnection] = useState<Connection | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [stars, setStars] = useState(0);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const load = useCallback(async () => {
     if (!matchId || !myId) return;
@@ -43,6 +51,7 @@ export default function RateScreen() {
     setMatch(m);
     setMine(r1);
     setAboutMe(r2);
+    if (m) setConnection(await loadConnectionWith(m.other_id));
     setLoading(false);
   }, [matchId, myId]);
 
@@ -50,12 +59,44 @@ export default function RateScreen() {
     load();
   }, [load]);
 
-  // The reveal flips server-side when the other person rates → reload.
+  // The reveal (ratings) and the other person accepting (connections) both
+  // flip server-side → reload.
   useRealtime(
-    matchId ? `rating-${matchId}` : null,
-    [{ table: 'ratings', filter: `match_id=eq.${matchId}` }],
+    matchId && myId ? `rating-${matchId}` : null,
+    [
+      { table: 'ratings', filter: `match_id=eq.${matchId}` },
+      { table: 'connections', filter: `user_a=eq.${myId}` },
+      { table: 'connections', filter: `user_b=eq.${myId}` },
+    ],
     load,
   );
+
+  async function onConnect() {
+    if (!matchId) return;
+    setConnecting(true);
+    try {
+      await connectOffer(matchId);
+      track('connect_offered');
+      await load();
+    } catch (e) {
+      Alert.alert('Could not connect', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function onDeclineConnect() {
+    if (!matchId) return;
+    setConnecting(true);
+    try {
+      await connectDecline(matchId);
+      await load();
+    } catch {
+      // silent
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   async function onSubmit() {
     if (!match || !myId) return;
@@ -162,6 +203,42 @@ export default function RateScreen() {
         )
       ) : null}
 
+      {/* The Connect offer (PRD 5.2) — only after BOTH rated, and only if both
+          rated well (rating-gated suppression). */}
+      {mine && aboutMe && mine.stars >= 3 && aboutMe.stars >= 3 ? (
+        connection?.status === 'active' ? (
+          <Card tone="night" style={styles.connectCard}>
+            <Ionicons name="people" size={28} color={colors.gold} />
+            <Text variant="heading" weight="bold" center style={{ color: colors.moonlightStrong }}>
+              You&apos;re connected!
+            </Text>
+            <Text variant="small" tone="moonlight" center>
+              {name} is now in your circle. You can message anytime from your Inbox.
+            </Text>
+          </Card>
+        ) : connection?.i_accepted ? (
+          <View style={styles.waiting}>
+            <Ionicons name="hourglass-outline" size={20} color={colors.textFaint} />
+            <Text variant="small" tone="faint" style={{ flex: 1 }}>
+              Waiting for {name} to connect too.
+            </Text>
+          </View>
+        ) : connection?.status === 'declined' ? null : (
+          <Card style={styles.connectCard}>
+            <Ionicons name="people-outline" size={28} color={colors.accent} />
+            <Text variant="heading" weight="bold" center>
+              Connect with {name}?
+            </Text>
+            <Text variant="small" tone="secondary" center>
+              Connections can message anytime and ask each other for help directly.
+              Only if you both choose to.
+            </Text>
+            <Button label="Connect" onPress={onConnect} busy={connecting} />
+            <Button label="Not now" variant="ghost" onPress={onDeclineConnect} disabled={connecting} />
+          </Card>
+        )
+      ) : null}
+
       <View style={styles.footer}>
         <Button label="Done" variant={mine ? 'primary' : 'ghost'} onPress={() => router.replace('/(main)')} />
       </View>
@@ -228,6 +305,7 @@ const styles = StyleSheet.create({
   avatar: { width: 80, height: 80, borderRadius: 40 },
   avatarFallback: { alignItems: 'center', justifyContent: 'center' },
   card: { gap: spacing.md, marginBottom: spacing.lg },
+  connectCard: { gap: spacing.sm, alignItems: 'center', marginBottom: spacing.lg },
   starRow: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'center', paddingVertical: spacing.sm },
   noteInput: { minHeight: 72, textAlignVertical: 'top' },
   waiting: {

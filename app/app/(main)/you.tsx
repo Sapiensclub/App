@@ -14,6 +14,7 @@ import { TrustedContactsEditor } from '@/components/profile/TrustedContactsEdito
 import { Button, Card, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo, journeyProgress, MILESTONES } from '@/lib/celestial';
+import { loadMyConnections } from '@/lib/connections';
 import { useProfile } from '@/lib/profile/ProfileProvider';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -36,6 +37,7 @@ export default function You() {
   const [contactsOpen, setContactsOpen] = useState(false);
 
   const [waysLabels, setWaysLabels] = useState<string[]>([]);
+  const [connectionCount, setConnectionCount] = useState(0);
 
   const { width } = useWindowDimensions();
   const journeyWidth = Math.min(width - spacing.xl * 2 - spacing.xl * 2, 320);
@@ -85,6 +87,7 @@ export default function You() {
     useCallback(() => {
       refetch();
       loadWays();
+      loadMyConnections().then((c) => setConnectionCount(c.length));
     }, [refetch, loadWays]),
   );
 
@@ -201,18 +204,20 @@ export default function You() {
         </View>
       </Card>
 
-      {/* Monthly leaderboard */}
-      <Pressable onPress={() => router.push('/leaderboard')}>
-        <Card style={styles.rowCard}>
-          <View style={styles.row}>
-            <Ionicons name="trophy-outline" size={20} color={colors.textSecondary} />
-            <Text variant="body" style={{ flex: 1 }}>
-              This month&apos;s leaderboard
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </View>
-        </Card>
-      </Pressable>
+      {/* Connections + leaderboard */}
+      <Card style={[styles.rowCard, styles.linksCard]}>
+        <LinkRow
+          icon="people-outline"
+          label={connectionCount > 0 ? `Connections · ${connectionCount}` : 'Connections'}
+          onPress={() => router.push('/connections')}
+        />
+        <Divider />
+        <LinkRow
+          icon="trophy-outline"
+          label="This month's leaderboard"
+          onPress={() => router.push('/leaderboard')}
+        />
+      </Card>
 
       {/* Ways I help glance */}
       <Pressable onPress={() => setWaysOpen(true)}>

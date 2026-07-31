@@ -53,6 +53,7 @@ function RootNavigator() {
           <Stack.Screen name="chat" />
           <Stack.Screen name="rate" />
           <Stack.Screen name="leaderboard" />
+          <Stack.Screen name="connections" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && onboarded === false}>
           <Stack.Screen name="(onboarding)" />
