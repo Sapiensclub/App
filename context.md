@@ -173,17 +173,28 @@ profile, trusted-contacts editor).
   Warning haptic on activate. **Location link = maps pin at alert time, NOT a live-updating
   page** (that + Layer 3 community responders are deferred/[P2]).
 
+### Phase 6 — Community & notifications ✅ (COMPLETE)
+- **Chunk 1 ✅ — notifications bell**: 5 DB triggers write `notifications` (hand raised,
+  you were confirmed, help completed, connection active, connection milestone [PRD 5.8]);
+  milestone fires only on enum stage upgrade (no reset spam). `NotificationBell` (unread dot,
+  realtime) in Home header; `app/notifications` center (unread highlight, tap-through per
+  type, mark-all-read on view). `lib/notifications.ts` centralizes copy (staged-disclosure
+  safe). Push-to-lockscreen deferred to Phase 8 (needs dev build).
+- **Chunks 2 & 3 ✅ — Moments feed + selfies**: `'help'` added to `moment_type` (own
+  migration). Triggers auto-create anonymous `help` tiles on completion (deduped/request) +
+  `milestone` tiles on stage-up. `moments_feed` view = safe cols only (first names, NO ids →
+  no tap-to-profile, NO counts). Moments tab: tiles, ❤️ appreciate (optimistic), remove-mine,
+  "all caught up" bottom. Home "N helps near you this week". Selfies (PRD 8.4): `moments`
+  storage bucket, `propose_selfie_moment`/`consent_moment`/`remove_moment` (visible only when
+  BOTH consent; either removes anytime), `moment_pending` notification + pending card via
+  `my_pending_moments`; "Share a moment" on both completion screens → `app/moment/new`.
+
 ---
 
 ## 5. Phases remaining (P1)
 
-- **Phase 6 — Community & notifications** ← NEXT: finite community-moments (anti-addiction hard
-  rules — bottom, no infinite scroll, "you're all caught up"), double-opt-in area-scoped
-  selfies, milestones in-feed, ❤️ appreciate (count hidden), aggregate activity map,
-  notifications bell, warm empty states. **Milestone notifications (PRD 5.8) deferred to
-  here** (needs the bell surface).
-- **Phase 7 — Admin / Trust & Safety dashboard** (Next.js): resolve reports, read
-  flagged active-request chats, ban/suspend, approve category suggestions.
+- **Phase 7 — Admin / Trust & Safety dashboard** ← NEXT (Next.js `/admin`): resolve
+  reports, read flagged active-request chats, ban/suspend, approve category suggestions.
 - **Phase 8 — Hardening & store prep**: accessibility pass, security/RLS review,
   notification budgets/caps, data-retention purge jobs, mid-range Android perf, store
   assets + App Store safety-review readiness.
