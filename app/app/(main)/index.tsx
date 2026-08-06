@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OngoingHelp } from '@/components/help/OngoingHelp';
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
@@ -9,7 +9,7 @@ import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import { useProfile } from '@/lib/profile/ProfileProvider';
-import { spacing } from '@/theme/tokens';
+import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 // The home screen (PRD 10.4): a calm greeting, a Celestial Journey glance in
@@ -54,6 +54,18 @@ export default function Home() {
             {firstName}
           </Text>
         </View>
+        <Pressable
+          onPress={() => router.push('/sos')}
+          style={[styles.sosBtn, { borderColor: colors.danger }]}
+          accessibilityRole="button"
+          accessibilityLabel="Emergency SOS"
+          hitSlop={8}
+        >
+          <Ionicons name="alert" size={18} color={colors.danger} />
+          <Text variant="label" weight="bold" style={{ color: colors.danger }}>
+            SOS
+          </Text>
+        </Pressable>
       </View>
 
       {/* A way back into any in-progress request or help. */}
@@ -124,6 +136,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  sosBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1.5,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   journeyCard: { gap: spacing.lg },
   journeyRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
