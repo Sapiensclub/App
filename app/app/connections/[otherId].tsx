@@ -90,14 +90,26 @@ export default function ConnectionProfile() {
 
       <View style={styles.actions}>
         <Button
+          label={`Ask ${c.other_name ?? 'them'} for help`}
+          left={<Ionicons name="hand-left" size={18} color={colors.onAccent} />}
+          onPress={() =>
+            router.push({
+              pathname: '/request/new',
+              params: { directedTo: c.other_id, directedName: c.other_name ?? '' },
+            })
+          }
+        />
+        <Button
           label="Message"
-          left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.onAccent} />}
+          variant="secondary"
+          left={<Ionicons name="chatbubble-ellipses" size={18} color={colors.accent} />}
           onPress={() =>
             router.push({ pathname: '/connections/inbox/[otherId]', params: { otherId: c.other_id } })
           }
         />
         <Text variant="small" tone="faint" center>
-          Directed requests (&ldquo;Ask {c.other_name ?? 'them'} for help&rdquo;) arrive next.
+          Asking {c.other_name ?? 'them'} sends your request to them first. If
+          they&apos;re not around, it opens to others nearby.
         </Text>
       </View>
     </Screen>

@@ -43,6 +43,9 @@ export default function HelpNow() {
     const rows = ((data ?? []) as HelperPing[])
       .filter((p) => !p.expires_at || new Date(p.expires_at).getTime() > Date.now())
       .sort((a, b) => {
+        // Personal asks from your connections come first.
+        const dir = Number(!!b.directed_to_me) - Number(!!a.directed_to_me);
+        if (dir !== 0) return dir;
         const ur = (URGENCY_RANK[a.urgency] ?? 9) - (URGENCY_RANK[b.urgency] ?? 9);
         if (ur !== 0) return ur;
         return (a.approx_distance_m ?? 1e9) - (b.approx_distance_m ?? 1e9);
@@ -143,6 +146,11 @@ export default function HelpNow() {
                     </Text>
                   </View>
                 </View>
+                {p.directed_to_me ? (
+                  <Text variant="small" weight="semibold" tone="accent">
+                    {p.from_name ?? 'A connection'} asked you directly
+                  </Text>
+                ) : null}
                 {p.description ? (
                   <Text variant="small" tone="secondary" numberOfLines={2}>
                     {p.description}

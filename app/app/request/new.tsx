@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -67,6 +67,13 @@ function buildSchedulePresets(): { label: string; when: Date }[] {
 export default function NewRequest() {
   const { colors } = useTheme();
   const { session } = useAuth();
+  // When arriving from a connection's profile ("Ask [name] for help"), the
+  // request is DIRECTED at that one person first (PRD 5.5).
+  const { directedTo, directedName } = useLocalSearchParams<{
+    directedTo?: string;
+    directedName?: string;
+  }>();
+  const isDirected = !!directedTo;
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +118,8 @@ export default function NewRequest() {
     setCap(4);
   }
 
-  const groupAllowed = category?.interaction_type === 'group' || category?.interaction_type === 'either';
+  const groupAllowed =
+    !isDirected && (category?.interaction_type === 'group' || category?.interaction_type === 'either');
 
   async function send() {
     if (!category || !session) return;
@@ -145,8 +153,11 @@ export default function NewRequest() {
           meetpoint_lng: coords.lng,
           approx_area: locality,
           prefer_women: preferWomen,
-          interaction_type: groupAllowed && isGroup ? 'group' : 'one_to_one',
-          participant_cap: groupAllowed && isGroup ? cap : null,
+          // A directed ask is always one-to-one (you're asking one person).
+          interaction_type: isDirected ? 'one_to_one' : groupAllowed && isGroup ? 'group' : 'one_to_one',
+          participant_cap: !isDirected && groupAllowed && isGroup ? cap : null,
+          is_directed: isDirected,
+          directed_to: isDirected ? directedTo : null,
         })
         .select('id')
         .single();
@@ -156,7 +167,8 @@ export default function NewRequest() {
         category: category.label,
         urgency,
         timing,
-        group: groupAllowed && isGroup,
+        group: !isDirected && groupAllowed && isGroup,
+        directed: isDirected,
       });
       router.replace({ pathname: '/request/[id]', params: { id: data.id as string } });
     } catch (e) {
@@ -173,7 +185,18 @@ export default function NewRequest() {
   if (!category) {
     return (
       <Screen>
-        <TopBar title="What do you need?" onBack={() => router.back()} />
+        <TopBar
+          title={isDirected ? `Ask ${directedName || 'them'} for help` : 'What do you need?'}
+          onBack={() => router.back()}
+        />
+        {isDirected ? (
+          <View style={[styles.directedBanner, { backgroundColor: colors.accentSoft }]}>
+            <Ionicons name="person" size={18} color={colors.accent} />
+            <Text variant="small" tone="accent" weight="semibold" style={{ flex: 1 }}>
+              {directedName || 'They'} will be asked first. Pick what you need.
+            </Text>
+          </View>
+        ) : null}
         {loading ? (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.accent} />
@@ -328,10 +351,15 @@ export default function NewRequest() {
         </Card>
 
         <View style={styles.sendWrap}>
-          <Button label="Ask for help" onPress={send} busy={sending} />
+          <Button
+            label={isDirected ? `Ask ${directedName || 'them'}` : 'Ask for help'}
+            onPress={send}
+            busy={sending}
+          />
           <Text variant="small" tone="faint" center>
-            Nearby verified helpers will be notified. They see your request and
-            area — never your exact location until you confirm someone.
+            {isDirected
+              ? `${directedName || 'They'} will be asked first. If they're not around, your request opens to others nearby. They see your exact location only once they accept.`
+              : 'Nearby verified helpers will be notified. They see your request and area — never your exact location until you confirm someone.'}
           </Text>
         </View>
       </View>
@@ -394,6 +422,14 @@ const styles = StyleSheet.create({
   },
   topTitle: { flex: 1, textAlign: 'center' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  directedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -21,6 +21,12 @@ export type HelperPing = {
   request_status: string;
   expires_at: string | null;
   prefer_women: boolean;
+  // Directed asks (PRD 5.5): when this ping is aimed at me by a connection, the
+  // seeker's identity is revealed (we already know each other).
+  is_directed: boolean;
+  directed_to_me: boolean;
+  from_name: string | null;
+  from_photo: string | null;
 };
 
 export type Candidate = {

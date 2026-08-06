@@ -323,9 +323,28 @@ export default function HelperRequest() {
   }
 
   // ── Open: can raise a hand, or waiting after raising ──────────────────────
+  const directed = !!ping?.directed_to_me;
   return (
     <Screen>
-      <TopBar title={ping?.category_label ?? 'Request'} onBack={() => router.back()} />
+      <TopBar title={directed ? 'A personal ask' : ping?.category_label ?? 'Request'} onBack={() => router.back()} />
+
+      {directed ? (
+        <View style={styles.directedHeader}>
+          {ping?.from_photo ? (
+            <Image source={{ uri: ping.from_photo }} style={styles.directedAvatar} contentFit="cover" />
+          ) : (
+            <View style={[styles.directedAvatar, styles.avatarFallback, { backgroundColor: colors.accentSoft }]}>
+              <Ionicons name="person" size={28} color={colors.accent} />
+            </View>
+          )}
+          <Text variant="heading" weight="bold" center style={{ marginTop: spacing.sm }}>
+            {ping?.from_name ?? 'A connection'} is asking you
+          </Text>
+          <Text variant="small" tone="secondary" center>
+            A personal request from someone you&apos;re connected with.
+          </Text>
+        </View>
+      ) : null}
 
       <Card style={styles.detailCard}>
         <DetailRow icon="pricetag-outline" text={ping?.category_label ?? ''} />
@@ -337,7 +356,9 @@ export default function HelperRequest() {
       </Card>
 
       <Text variant="small" tone="faint" center style={styles.privacyNote}>
-        You&apos;ll see their name and exact location only if they confirm you.
+        {directed
+          ? `${ping?.from_name ?? 'They'} asked you directly. Raise your hand to help — you'll get their exact location once they confirm.`
+          : "You'll see their name and exact location only if they confirm you."}
       </Text>
 
       {state === 'raised' ? (
@@ -408,6 +429,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
+  directedHeader: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.md, paddingBottom: spacing.lg },
+  directedAvatar: { width: 72, height: 72, borderRadius: 36 },
   detailCard: { gap: spacing.sm, marginTop: spacing.sm },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   privacyNote: { paddingTop: spacing.lg, paddingHorizontal: spacing.lg },

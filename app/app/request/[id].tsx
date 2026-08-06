@@ -34,6 +34,9 @@ type RequestRow = {
   category_id: string;
   interaction_type: 'one_to_one' | 'group' | 'either';
   participant_cap: number | null;
+  is_directed: boolean;
+  directed_to: string | null;
+  opened_at: string | null;
 };
 
 export default function RequestWaiting() {
@@ -44,6 +47,7 @@ export default function RequestWaiting() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [match, setMatch] = useState<MatchDetails | null>(null);
   const [participants, setParticipants] = useState<MatchDetails[]>([]);
+  const [directedName, setDirectedName] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
 
@@ -54,7 +58,7 @@ export default function RequestWaiting() {
     const { data: reqRow } = await supabase
       .from('requests')
       .select(
-        'id, status, timing, urgency, description, approx_area, expires_at, category_id, interaction_type, participant_cap',
+        'id, status, timing, urgency, description, approx_area, expires_at, category_id, interaction_type, participant_cap, is_directed, directed_to, opened_at',
       )
       .eq('id', id)
       .single();
@@ -68,6 +72,16 @@ export default function RequestWaiting() {
           .single();
         if (cat) setCategoryLabel(cat.label);
       }
+      // The directed person's first name for the waiting copy (they're a
+      // connection, so my_connections exposes their name).
+      if (reqRow.directed_to && !directedName) {
+        const { data: conn } = await supabase
+          .from('my_connections')
+          .select('other_name')
+          .eq('other_id', reqRow.directed_to)
+          .maybeSingle();
+        if (conn?.other_name) setDirectedName(conn.other_name as string);
+      }
     }
 
     setMatch(await loadMatchForRequest(id));
@@ -79,7 +93,7 @@ export default function RequestWaiting() {
       .eq('request_id', id)
       .order('raised_at');
     setCandidates((cands ?? []) as Candidate[]);
-  }, [id, categoryLabel]);
+  }, [id, categoryLabel, directedName]);
 
   useEffect(() => {
     load();
@@ -226,6 +240,11 @@ export default function RequestWaiting() {
       : expiredLocally
         ? 'expired'
         : request.status;
+
+  // Directed request (PRD 5.5): waiting on the named person, or opened to all.
+  const askName = directedName ?? 'your connection';
+  const directedWaiting = request.is_directed && !request.opened_at && status === 'open';
+  const directedOpened = request.is_directed && !!request.opened_at && status === 'open';
 
   // ── Group coordination (multi-accept, PRD 4.7) ────────────────────────────
   if (request.interaction_type === 'group' && status !== 'expired' && status !== 'cancelled') {
@@ -492,7 +511,33 @@ export default function RequestWaiting() {
     <Screen scroll={false}>
       <View style={styles.body}>
         <View style={styles.center}>
-          {status === 'open' ? (
+          {directedWaiting ? (
+            <>
+              <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="person" size={44} color={colors.accent} />
+              </View>
+              <Text variant="title" center>
+                Waiting for {askName}…
+              </Text>
+              <Text variant="body" tone="secondary" center style={styles.copy}>
+                We&apos;ve asked {askName} first. If they&apos;re not around in a
+                few minutes, we&apos;ll quietly ask others nearby too.
+              </Text>
+            </>
+          ) : directedOpened ? (
+            <>
+              <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
+                <Ionicons name="radio-outline" size={44} color={colors.accent} />
+              </View>
+              <Text variant="title" center>
+                Asking others nearby too
+              </Text>
+              <Text variant="body" tone="secondary" center style={styles.copy}>
+                {askName} hasn&apos;t answered yet, so we&apos;re also notifying
+                nearby verified helpers. Whoever&apos;s free can raise a hand.
+              </Text>
+            </>
+          ) : status === 'open' ? (
             <>
               <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
                 <Ionicons name="radio-outline" size={44} color={colors.accent} />
