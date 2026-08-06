@@ -27,10 +27,12 @@ export type MyProfile = {
   member_since: string;
   verified: boolean;
   onboarded_at: string | null;
+  suspended_until: string | null;
+  banned_at: string | null;
 };
 
 const COLUMNS =
-  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, moneta_lifetime, moneta_balance, trust_rating_avg, goodness_score, member_since, verified, onboarded_at';
+  'id, display_name, display_photo_url, bio, celestial_stage, unique_helps, total_helps, moneta_lifetime, moneta_balance, trust_rating_avg, goodness_score, member_since, verified, onboarded_at, suspended_until, banned_at';
 
 type ProfileContextValue = {
   profile: MyProfile | null;

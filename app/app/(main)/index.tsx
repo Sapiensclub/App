@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { OngoingHelp } from '@/components/help/OngoingHelp';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -9,6 +9,7 @@ import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
+import { restrictionMessage, restrictionState } from '@/lib/moderation';
 import { recentHelpCount } from '@/lib/moments';
 import { useProfile } from '@/lib/profile/ProfileProvider';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -37,10 +38,16 @@ export default function Home() {
   const stage = celestialInfo(profile?.celestial_stage ?? 'new_moon');
   const uniqueHelps = profile?.unique_helps ?? 0;
   const verified = profile?.verified ?? false;
+  const restriction = restrictionState(profile);
 
   // The disclosure gate (PRD 2.1 / 10.8): looking around is free, but asking
-  // for or offering help requires verification first.
+  // for or offering help requires verification first — and an unrestricted
+  // account (a suspended/banned member can't act; server-enforced too).
   function onAction(kind: 'need' | 'help') {
+    if (restriction.restricted) {
+      Alert.alert('Account restricted', restrictionMessage(restriction));
+      return;
+    }
     if (!verified) {
       setVerifyOpen(true);
       return;
@@ -113,6 +120,20 @@ export default function Home() {
         </Text>
       </View>
 
+      {restriction.restricted ? (
+        <Card style={[styles.restrictCard, { backgroundColor: colors.accentSoft, borderColor: colors.danger }]}>
+          <View style={styles.restrictRow}>
+            <Ionicons name="alert-circle" size={22} color={colors.danger} />
+            <Text variant="body" weight="bold" style={{ color: colors.danger, flex: 1 }}>
+              Account restricted
+            </Text>
+          </View>
+          <Text variant="small" tone="secondary">
+            {restrictionMessage(restriction)}
+          </Text>
+        </Card>
+      ) : null}
+
       {/* The two big actions. */}
       <View style={styles.actions}>
         <Tile
@@ -174,5 +195,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.xl,
   },
+  restrictCard: { borderWidth: 1.5, gap: spacing.sm, marginBottom: spacing.lg },
+  restrictRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   actions: { gap: spacing.lg },
 });

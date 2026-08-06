@@ -66,6 +66,12 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
             <div className="mt-1 whitespace-pre-wrap">{report.resolution}</div>
           </div>
         ) : null}
+        <Link
+          href={`/users/${report.reported_id}`}
+          className="mt-1 font-semibold text-[#C0392B] underline"
+        >
+          Review reported member →
+        </Link>
       </div>
 
       {report.context === 'chat' ? (
