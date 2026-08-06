@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
@@ -8,7 +9,18 @@ import {
   getCurrentCoords,
   requestLocationPermission,
 } from '@/lib/location/locationProvider';
-import { fireSos, loadActiveSos, resolveSos, type FireSosResult, type SosEvent } from '@/lib/sos/sos';
+import {
+  fireSos,
+  loadActiveSos,
+  loadTrustedContacts,
+  markSosAlerted,
+  resolveSos,
+  type FireSosResult,
+  type SosEvent,
+  type TrustedContact,
+} from '@/lib/sos/sos';
+import { alertContacts, buildAlertMessage } from '@/lib/sos/sosAlerter';
+import { useProfile } from '@/lib/profile/ProfileProvider';
 import { useRealtime } from '@/lib/realtime';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -32,8 +44,12 @@ async function bestEffortCoords(): Promise<{ lat: number; lng: number } | null> 
 
 export default function Sos() {
   const { colors } = useTheme();
+  const { profile } = useProfile();
   const [active, setActive] = useState<SosEvent | null>(null);
   const [fired, setFired] = useState<FireSosResult | null>(null);
+  const [contacts, setContacts] = useState<TrustedContact[]>([]);
+  const [alerted, setAlerted] = useState(false);
+  const [alerting, setAlerting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -43,12 +59,15 @@ export default function Sos() {
   const firing = useRef(false);
 
   const load = useCallback(async () => {
-    setActive(await loadActiveSos());
+    const a = await loadActiveSos();
+    setActive(a);
+    if (a?.alerted_at) setAlerted(true);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
+    loadTrustedContacts().then(setContacts);
   }, [load]);
 
   useRealtime(active ? `sos-${active.id}` : null, [{ table: 'sos_events', filter: `id=eq.${active?.id}` }], load);
@@ -66,6 +85,7 @@ export default function Sos() {
     clearTimer();
     setProgress(1);
     setActivating(true);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
     try {
       const coords = await bestEffortCoords();
       const res = await fireSos(coords);
@@ -86,6 +106,7 @@ export default function Sos() {
         created_at: new Date().toISOString(),
         resolved: false,
         resolved_at: null,
+        alerted_at: null,
         daily_count: 1,
       });
     } finally {
@@ -117,6 +138,29 @@ export default function Sos() {
     Linking.openURL(`tel:${EMERGENCY_NUMBER}`).catch(() =>
       Alert.alert('Could not open dialer', `Please dial ${EMERGENCY_NUMBER} yourself.`),
     );
+  }
+
+  async function onAlertContacts() {
+    if (alerting) return;
+    setAlerting(true);
+    try {
+      // Freshen the location so the link is as current as possible at send time,
+      // falling back to what we captured when the SOS fired.
+      const fresh = await bestEffortCoords();
+      const stored =
+        active?.lat != null && active?.lng != null ? { lat: active.lat, lng: active.lng } : null;
+      const message = buildAlertMessage(profile?.display_name ?? null, fresh ?? stored);
+      const outcome = await alertContacts(contacts, message);
+      if (outcome === 'cancelled') return;
+      if (outcome === 'failed') {
+        Alert.alert('Could not open messaging', `Please text or call your contacts, or call ${EMERGENCY_NUMBER}.`);
+        return;
+      }
+      setAlerted(true);
+      if (active && active.id !== 'local') await markSosAlerted(active.id);
+    } finally {
+      setAlerting(false);
+    }
   }
 
   async function onSafe() {
@@ -153,7 +197,8 @@ export default function Sos() {
             SOS active
           </Text>
           <Text variant="body" tone="secondary" center style={styles.copy}>
-            Call 112 now for immediate help. When you&apos;re safe, let us know.
+            Call 112 for immediate help, and let your trusted contacts know where
+            you are. When you&apos;re safe, let us know.
           </Text>
           {fired?.over_limit ? (
             <Text variant="small" tone="faint" center style={styles.copy}>
@@ -170,7 +215,34 @@ export default function Sos() {
               Call {EMERGENCY_NUMBER}
             </Text>
           </Pressable>
-          <Button label="I'm safe now" variant="secondary" onPress={onSafe} />
+
+          {contacts.length > 0 ? (
+            alerted ? (
+              <>
+                <View style={[styles.alertedRow, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Text variant="body" weight="semibold" tone="accent" style={{ flex: 1 }}>
+                    Trusted contacts alerted
+                  </Text>
+                </View>
+                <Button label="Alert them again" variant="secondary" onPress={onAlertContacts} busy={alerting} />
+              </>
+            ) : (
+              <Button
+                label={`Alert my ${contacts.length} trusted ${contacts.length === 1 ? 'contact' : 'contacts'}`}
+                onPress={onAlertContacts}
+                busy={alerting}
+                left={<Ionicons name="send" size={18} color={colors.onAccent} />}
+              />
+            )
+          ) : (
+            <Text variant="small" tone="faint" center>
+              No trusted contacts set yet — add them in your profile so Sapiens can
+              alert them for you.
+            </Text>
+          )}
+
+          <Button label="I'm safe now" variant="ghost" onPress={onSafe} />
         </View>
       </Screen>
     );
@@ -273,6 +345,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   footer: { gap: spacing.md, paddingBottom: spacing.lg },
+  alertedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+  },
   callBtn: {
     flexDirection: 'row',
     alignItems: 'center',

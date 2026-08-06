@@ -11,6 +11,7 @@ export type SosEvent = {
   created_at: string;
   resolved: boolean;
   resolved_at: string | null;
+  alerted_at: string | null;
   daily_count: number;
 };
 
@@ -20,6 +21,27 @@ export type FireSosResult = {
   soft_limit: number;
   over_limit: boolean;
 };
+
+export type TrustedContact = {
+  id: string;
+  name: string;
+  phone: string;
+  slot: number;
+};
+
+/** The caller's trusted contacts (1–3, captured at onboarding). */
+export async function loadTrustedContacts(): Promise<TrustedContact[]> {
+  const { data } = await supabase
+    .from('trusted_contacts')
+    .select('id, name, phone, slot')
+    .order('slot');
+  return (data ?? []) as TrustedContact[];
+}
+
+/** Record that the owner triggered the trusted-contact alert. */
+export async function markSosAlerted(id: string): Promise<void> {
+  await supabase.rpc('mark_sos_alerted', { p_id: id });
+}
 
 /** Record an SOS press. Server computes the nth-today count. */
 export async function fireSos(coords: { lat: number; lng: number } | null): Promise<FireSosResult> {
