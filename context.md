@@ -160,14 +160,24 @@ profile, trusted-contacts editor).
   wave (`dispatch_connections` pings eligible connections first on a normal request; tick
   widens to strangers after; PRD 5.6). Proved via `directed-harness.mjs`.
 
+### Phase 5 — SOS ✅ (COMPLETE)
+- **Chunk 1 ✅ — guarded button**: `fire_sos` RPC (records press, server-computes nth-today
+  count, `sos_soft_daily_limit` surfaced not enforced), `resolve_sos` ("I'm safe"),
+  `resolved_at` col; `app/sos` screen — hold-to-activate guard, best-effort location (never
+  blocks), one-tap **Call 112** (device dialer, works offline), over-limit accountability
+  note; SOS entry in Home header (modal route). Builds on Phase 0 `sos_events`.
+- **Chunk 2 ✅ — trusted-contact alerts (Layer 1)**: `alerted_at` col + `mark_sos_alerted`;
+  **device-native delivery** (owner's decision) — `lib/sos/sosAlerter.ts` opens the phone's
+  SMS composer to all trusted contacts pre-filled with a maps location link, falls back to
+  share sheet; behind a seam so server-sent SMS can replace it later. Added `expo-sms`.
+  Warning haptic on activate. **Location link = maps pin at alert time, NOT a live-updating
+  page** (that + Layer 3 community responders are deferred/[P2]).
+
 ---
 
 ## 5. Phases remaining (P1)
 
-- **Phase 5 — SOS** ← NEXT: guarded button (press-hold/slide), trusted-contact SMS alerts +
-  live-location link (Layer 1), one-tap 112 (Layer 2), soft daily limit + accountability
-  + are-you-safe, offline degradation. (Layer 3 community responders is [P2].)
-- **Phase 6 — Community & notifications**: finite community-moments (anti-addiction hard
+- **Phase 6 — Community & notifications** ← NEXT: finite community-moments (anti-addiction hard
   rules — bottom, no infinite scroll, "you're all caught up"), double-opt-in area-scoped
   selfies, milestones in-feed, ❤️ appreciate (count hidden), aggregate activity map,
   notifications bell, warm empty states. **Milestone notifications (PRD 5.8) deferred to
