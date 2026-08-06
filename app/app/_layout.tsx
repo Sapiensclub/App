@@ -54,6 +54,7 @@ function RootNavigator() {
           <Stack.Screen name="rate" />
           <Stack.Screen name="leaderboard" />
           <Stack.Screen name="connections" />
+          <Stack.Screen name="notifications" />
           <Stack.Screen name="sos" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && onboarded === false}>

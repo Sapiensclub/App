@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OngoingHelp } from '@/components/help/OngoingHelp';
+import { NotificationBell } from '@/components/NotificationBell';
 import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -54,6 +55,7 @@ export default function Home() {
             {firstName}
           </Text>
         </View>
+        <NotificationBell />
         <Pressable
           onPress={() => router.push('/sos')}
           style={[styles.sosBtn, { borderColor: colors.danger }]}
@@ -134,6 +136,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
