@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { OngoingHelp } from '@/components/help/OngoingHelp';
@@ -9,6 +9,7 @@ import { VerifyFlow } from '@/components/kyc/VerifyFlow';
 import { Card, Screen, Text, Tile } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
+import { recentHelpCount } from '@/lib/moments';
 import { useProfile } from '@/lib/profile/ProfileProvider';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -21,6 +22,13 @@ export default function Home() {
   const { session } = useAuth();
   const { profile, refetch } = useProfile();
   const [verifyOpen, setVerifyOpen] = useState(false);
+  const [helpCount, setHelpCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      recentHelpCount().then(setHelpCount).catch(() => {});
+    }, []),
+  );
 
   const firstName =
     profile?.display_name?.trim() ||
@@ -99,7 +107,9 @@ export default function Home() {
       <View style={styles.activityRow}>
         <Ionicons name="people-outline" size={18} color={colors.textSecondary} />
         <Text variant="small" tone="secondary">
-          No helps near you yet this week
+          {helpCount === 0
+            ? 'No helps near you yet this week'
+            : `${helpCount} ${helpCount === 1 ? 'help' : 'helps'} near you this week`}
         </Text>
       </View>
 

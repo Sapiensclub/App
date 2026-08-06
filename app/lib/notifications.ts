@@ -81,6 +81,12 @@ export function describeNotification(n: AppNotification): Described {
         title: `${str(p.other_name, 'A connection')} reached a milestone`,
         body: `They're now ${celestialInfo(str(p.stage, 'new_moon')).label}. Celebrate with them.`,
       };
+    case 'moment_pending':
+      return {
+        icon: 'camera',
+        title: 'A moment to approve',
+        body: 'Someone wants to share a moment with you. Open Moments to approve or decline.',
+      };
     default:
       return { icon: 'notifications', title: 'Update', body: '' };
   }

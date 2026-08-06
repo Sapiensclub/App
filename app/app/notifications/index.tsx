@@ -57,6 +57,9 @@ export default function Notifications() {
       case 'connection_milestone':
         if (oid) router.push({ pathname: '/connections/[otherId]', params: { otherId: oid } });
         break;
+      case 'moment_pending':
+        router.push('/moments');
+        break;
     }
   }
 

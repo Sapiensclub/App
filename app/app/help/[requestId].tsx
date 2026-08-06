@@ -269,6 +269,12 @@ export default function HelperRequest() {
             left={<Ionicons name="star" size={18} color={colors.onAccent} />}
             onPress={() => router.replace({ pathname: '/rate/[matchId]', params: { matchId: match.id } })}
           />
+          <Button
+            label="Share a moment"
+            variant="secondary"
+            left={<Ionicons name="camera" size={18} color={colors.accent} />}
+            onPress={() => router.push({ pathname: '/moment/new', params: { requestId: requestId! } })}
+          />
           <Button label="Not now" variant="ghost" onPress={() => router.replace('/(main)')} />
         </View>
       </Screen>
