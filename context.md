@@ -142,7 +142,7 @@ profile, trusted-contacts editor).
   month, ranked by uniques (not raw count). Global (area filters need stored user area —
   later). Screen from You tab.
 
-### Phase 4 — Connections & inbox (IN PROGRESS)
+### Phase 4 — Connections & inbox ✅ (COMPLETE)
 - **Chunk 1 ✅ — Connect offer**: double opt-in (`connect_offer`/`connect_decline`),
   rating-gated (both ≥3★, only shown after both rate), 7-day expiry, silent decline.
   `my_connections` view (private graph, PRD 5.7). Connections list + fuller profile;
@@ -153,17 +153,18 @@ profile, trusted-contacts editor).
   (`connection_nicknames`); `disconnect_connection` (silent, freeze), `block_connection`
   (freeze + hard block), `mark_chat_read`. Inbox tab + inbox chat screen (rename/
   disconnect/block, frozen state).
-- **Chunk 3 (NEXT) — directed requests + connections wave**: "Ask [name] for help"
-  (routes to one connection, falls back to open dispatch, disclosure ladder collapses,
-  PRD 5.5); connections wave (connections pinged BEFORE wave 1 on a general request,
-  PRD 5.6). This completes Phase 4.
+- **Chunk 3 ✅ — directed requests + connections wave**: "Ask [name] for help"
+  (`dispatch_directed` pings one connection only; `opened_at` marks fallback to open
+  dispatch after `directed_fallback_minutes`; ping reveals seeker identity to the named
+  connection via `helper_pings.directed_to_me/from_name/from_photo`, PRD 5.5). Connections
+  wave (`dispatch_connections` pings eligible connections first on a normal request; tick
+  widens to strangers after; PRD 5.6). Proved via `directed-harness.mjs`.
 
 ---
 
 ## 5. Phases remaining (P1)
 
-- **Phase 4 Chunk 3** — directed requests + connections wave (completes Phase 4).
-- **Phase 5 — SOS**: guarded button (press-hold/slide), trusted-contact SMS alerts +
+- **Phase 5 — SOS** ← NEXT: guarded button (press-hold/slide), trusted-contact SMS alerts +
   live-location link (Layer 1), one-tap 112 (Layer 2), soft daily limit + accountability
   + are-you-safe, offline degradation. (Layer 3 community responders is [P2].)
 - **Phase 6 — Community & notifications**: finite community-moments (anti-addiction hard
