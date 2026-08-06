@@ -189,13 +189,33 @@ profile, trusted-contacts editor).
   BOTH consent; either removes anytime), `moment_pending` notification + pending card via
   `my_pending_moments`; "Share a moment" on both completion screens → `app/moment/new`.
 
+### Phase 7 — Admin / Trust & Safety dashboard ✅ (COMPLETE) — Next.js `/admin`
+Auth: **Supabase login + `admins` allowlist** (RLS-locked, service-role read). Per-request
+server client (cookie auth) + `service.ts` (service-role, `server-only` guard so the secret
+key can't reach the browser). Every server action re-checks `getAdmin()`. Next.js **16**
+(cookies async; `middleware`→`proxy` — we skip middleware, refresh per request). Env:
+`admin/.env.local` (URL + PUBLISHABLE + SERVICE_KEY).
+- **Chunk 1 ✅** — foundation + reports: login page, `AdminShell`, overview (open reports /
+  suggestions / members counts), reports queue + detail with **read-only flagged-chat
+  evidence**, resolve (reviewing/actioned/dismissed + note). `seed-test-report.mjs`.
+- **Chunk 2 ✅** — suspend/ban: profiles `suspended_until`/`banned_at`/`moderation_note`;
+  `is_active_member()`; `protect_moderation_columns` trigger (users can't self-clear);
+  enforcement — restricted seeker can't insert a request (trigger), restricted helper can't
+  `raise_hand`. `admin_ban_user`/`admin_suspend_user`/`admin_lift_user` (SECURITY DEFINER,
+  service-role only). Members search + user detail w/ Suspend/Ban/Lift. App: `lib/moderation.ts`
+  + Home "Account restricted" banner gating the two actions.
+- **Chunk 3 ✅** — category suggestions: `admin_approve_suggestion` (SQL slugify + unique;
+  inserts into `categories`, defaults for the rest; optional parent/icon) + `admin_reject_suggestion`.
+  `/suggestions` review page. `seed-test-suggestion.mjs`.
+
+**Admin auth still owed:** proxy/middleware for token refresh + deployment auth hardening →
+Phase 8/launch. Dashboard is localhost-run for now.
+
 ---
 
 ## 5. Phases remaining (P1)
 
-- **Phase 7 — Admin / Trust & Safety dashboard** ← NEXT (Next.js `/admin`): resolve
-  reports, read flagged active-request chats, ban/suspend, approve category suggestions.
-- **Phase 8 — Hardening & store prep**: accessibility pass, security/RLS review,
+- **Phase 8 — Hardening & store prep** ← NEXT: accessibility pass, security/RLS review,
   notification budgets/caps, data-retention purge jobs, mid-range Android perf, store
   assets + App Store safety-review readiness.
 

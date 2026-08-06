@@ -19,6 +19,9 @@ export function AdminShell({ email, children }: { email: string | null; children
             <Link href="/users" className="hover:text-[#141414]">
               Members
             </Link>
+            <Link href="/suggestions" className="hover:text-[#141414]">
+              Suggestions
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm text-[#57534B]">
             <span>{email}</span>

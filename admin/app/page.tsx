@@ -21,8 +21,8 @@ export default async function Home() {
       <h1 className="text-2xl font-bold">Overview</h1>
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Stat label="Open reports" value={openReports.count ?? 0} href="/reports" />
-        <Stat label="Pending suggestions" value={pendingSuggestions.count ?? 0} />
-        <Stat label="Members" value={members.count ?? 0} />
+        <Stat label="Pending suggestions" value={pendingSuggestions.count ?? 0} href="/suggestions" />
+        <Stat label="Members" value={members.count ?? 0} href="/users" />
       </div>
 
       <p className="mt-8 text-sm text-[#57534B]">
