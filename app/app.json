@@ -9,9 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "club.sapiens.app"
     },
     "android": {
+      "package": "club.sapiens.app",
       "adaptiveIcon": {
         "backgroundColor": "#F7F4EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -51,6 +53,12 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Sapiens uses your location to find help near you and to let nearby people find your request. Your exact location is never shown to others until you confirm a helper."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F59E2D"
         }
       ]
     ],

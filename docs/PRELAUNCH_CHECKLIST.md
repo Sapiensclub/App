@@ -1,0 +1,87 @@
+# Sapiens — Pre-Launch Checklist
+
+Everything that must happen before the app is open to the public. Grouped by
+who does it. Items marked **[code done]** are built; the rest are your / vendor /
+lawyer tasks. Nothing here should be skipped for a public launch.
+
+---
+
+## 1. Technical — flip to production
+
+- [ ] **Remove dev backdoors**: run `supabase/PRELAUNCH_TEARDOWN.sql` once in the
+      Supabase SQL editor (drops `admin_reset_help_data`, `admin_set_helper_location`).
+      Verify with the query at the bottom of that file.
+- [ ] **Do not deploy `app/scripts/*`** — the harnesses/seeders use the service key.
+      They live only in the repo for local dev.
+- [ ] **Turn Supabase "Confirm email" back ON** (Auth → Providers → Email). It was
+      OFF only for Phase 0 testing. Consider switching auth to phone-OTP for launch
+      (the seam is `app/lib/auth/phoneOtp.ts`).
+- [ ] **Enable the pg_cron jobs** and confirm both are scheduled:
+      `sapiens-dispatch-tick` (every minute) and `sapiens-retention-sweep` (daily).
+- [ ] **PostHog**: add `EXPO_PUBLIC_POSTHOG_KEY` to `app/.env.local` (analytics is
+      wired and no-ops until then). **[code done]**
+- [ ] **Confirm secrets**: the service key lives ONLY in `admin/.env.local` (server)
+      and never in the mobile bundle; all `.env.local` files stay gitignored.
+- [ ] **Admin dashboard hardening** (before hosting anywhere but localhost): add
+      proxy-based session refresh, lock down deployment auth, serve over HTTPS.
+
+## 2. Replace the stubs with real vendors
+
+Each is isolated behind a seam so it's a small swap:
+- [ ] **KYC / liveness** — `app/lib/kyc/kycProvider.ts` (currently `StubKycProvider`
+      + `apply_mock_kyc`). Wire the real vendor (Aadhaar/DL + liveness) and the
+      face-match against the KYC selfie in `set_display_photo`.
+- [ ] **Phone OTP** — `app/lib/auth/phoneOtp.ts` (stub) + a real SMS provider.
+- [ ] **SOS alerts** — currently device-native SMS (`app/lib/sos/sosAlerter.ts`).
+      Optionally add server-sent SMS once a provider + DLT registration exist.
+- [ ] **Push send side** — an Edge Function that reads new `notifications` rows and
+      POSTs to the Expo Push API using `push_tokens`. Client registration is
+      **[code done]** (`app/lib/push.ts`) and activates automatically in an EAS build.
+
+## 3. Build & ship the app (EAS)
+
+- [ ] `eas.json` present with development / preview / production profiles. **[code done]**
+- [ ] Confirm the **bundle IDs** in `app.json` (`club.sapiens.app` for iOS + Android) —
+      these are permanent once published; change now if you want a different one.
+- [ ] `eas init` (adds the EAS `projectId`, which also activates push tokens), then
+      `eas build --profile preview` for an installable test build, and
+      `eas build --profile production` for the stores.
+- [ ] Install a preview build on a real device and verify **push notifications**
+      actually arrive (they can't be tested in Expo Go).
+
+## 4. Store submission
+
+- [ ] App icon + splash — **[code done]** (assets in `app/assets/images`).
+- [ ] Screenshots (real device), listing title/subtitle/description, keywords.
+- [ ] **Privacy policy + Terms URLs** (required by both stores).
+- [ ] Apple **App Privacy** questionnaire + Google Play **Data safety** form
+      (declare: location, photos, contacts, name — all first-party, no ads/tracking).
+- [ ] App Store safety review notes: explain KYC-gated, in-person mutual aid; the SOS
+      button and its limits; no payments for help.
+
+## 5. Legal / compliance GATE — blocks public launch (you + a lawyer)
+
+These are **not code** and must be in place before real users:
+- [ ] Legal entity + Terms of Service + Privacy Policy.
+- [ ] **DPDP Act** (India data protection) compliance; data-processing records.
+- [ ] **POCSO** + child-safety posture (the `over_18` gate exists; policy/process needed).
+- [ ] **IT Rules 2021** intermediary obligations (grievance officer, takedown SLAs) —
+      the reports/admin flow supports this operationally.
+- [ ] Liability & insurance for in-person help; incident-response plan for SOS.
+- [ ] **DLT SMS registration** (required to send templated SMS in India).
+- [ ] Moneta: confirm it stays non-monetary / non-redeemable, or get regulatory
+      advice before any real-world redemption (that feature is [P2] regardless).
+
+---
+
+## Still owed within P1 (features, not launch-blockers)
+
+- **Voice notes + photos in chat** (PRD 4.4/6.6) — active-request and inbox chats are
+  text-only. Voice notes are accessibility-relevant; a good next build.
+- **Leaderboard area filters** — need a stored "home area"; v1 is global (fine for a
+  closed-community launch).
+
+## Deferred by design — do NOT build for launch
+Premium Choice · masked calling · SOS Layer-3 community responders · E2E inbox ·
+retroactive help logging · embedded map · real-world Moneta redemption. (See
+`context.md` §8 for the full [P2]/[LATER] list.)

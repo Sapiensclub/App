@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { useLocationSync } from '@/lib/location/useLocationSync';
+import { registerForPush } from '@/lib/push';
 import { fonts } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -10,9 +13,15 @@ import { useTheme } from '@/theme/useTheme';
 //  The notifications bell lives on Home, added in Phase 6.)
 export default function MainTabsLayout() {
   const { colors } = useTheme();
+  const { session } = useAuth();
   // Keep last-known location fresh (only if permission already granted) so
   // the dispatch engine can find this user as a nearby helper.
   useLocationSync();
+
+  // Register this device for push (no-ops in Expo Go / simulator — see lib/push).
+  useEffect(() => {
+    if (session) registerForPush(session.user.id);
+  }, [session?.user.id]);
 
   return (
     <Tabs

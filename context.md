@@ -211,13 +211,35 @@ key can't reach the browser). Every server action re-checks `getAdmin()`. Next.j
 **Admin auth still owed:** proxy/middleware for token refresh + deployment auth hardening →
 Phase 8/launch. Dashboard is localhost-run for now.
 
+### Phase 8 — Hardening & store prep ✅ (COMPLETE) — code side
+- **Chunk 1 ✅** — security/RLS review (`docs/security-review.md`): all 25 tables RLS-scoped,
+  column-locked profile writes, disclosure views leak-checked, all definer funcs pin
+  search_path. Fixed `leaderboard_month` `user_id` leak → `is_me` boolean.
+  `supabase/PRELAUNCH_TEARDOWN.sql` (manual, drops dev backdoors).
+- **Chunk 2 ✅** — accessibility (70-year test): baseline already good (Button role/target,
+  text scales). New `IconButton` primitive; labelled the bare back/send/heart icon-only
+  controls.
+- **Chunk 3 ✅** — data lifecycle + notification budgets: `notify()` writer with per-type
+  daily caps + unread dedup (5 triggers route through it); `retention_sweep()` daily pg_cron
+  (purges closed active-chat messages [inbox permanent; open-report evidence kept], old read
+  notifications, resolved SOS, resolved reports). Windows/caps in `dispatch_config`.
+- **Chunk 4 ✅** — launch config: `eas.json`; `app.json` bundle IDs `club.sapiens.app` +
+  expo-notifications plugin; `lib/push.ts` token registration (no-ops in Expo Go, activates in
+  EAS build) wired in `(main)/_layout`; added `expo-notifications`/`expo-device`. PostHog was
+  already wired (add key). **`docs/PRELAUNCH_CHECKLIST.md`** = the launch source of truth.
+
+**P1 features still owed (not launch blockers):** voice notes + photos in chat (text-only so
+far); leaderboard area filters (need stored home area). **Launch tasks:** see
+`docs/PRELAUNCH_CHECKLIST.md` (teardown, confirm-email ON, EAS build + push send Edge Function,
+replace KYC/OTP/SMS stubs, legal/DPDP/POCSO/DLT gate).
+
 ---
 
 ## 5. Phases remaining (P1)
 
-- **Phase 8 — Hardening & store prep** ← NEXT: accessibility pass, security/RLS review,
-  notification budgets/caps, data-retention purge jobs, mid-range Android perf, store
-  assets + App Store safety-review readiness.
+**All P1 phases (0–8) are built.** Remaining before public launch = the
+`docs/PRELAUNCH_CHECKLIST.md` items (owner + lawyer + a few code swaps) and the two owed
+features above.
 
 ---
 
