@@ -5,27 +5,24 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Card, EmptyState, Screen, Text } from '@/components/ui';
-import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 type Row = {
-  user_id: string;
   display_name: string | null;
   display_photo_url: string | null;
   celestial_stage: string;
   new_uniques: number;
   rank: number;
+  is_me: boolean;
 };
 
 // The monthly leaderboard (PRD 7.9): new people reached this month. Recognition
 // only, ranked by uniques — never a raw help count.
 export default function Leaderboard() {
   const { colors } = useTheme();
-  const { session } = useAuth();
-  const myId = session?.user.id;
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +41,7 @@ export default function Leaderboard() {
   }, [load]);
 
   const monthName = new Date().toLocaleDateString(undefined, { month: 'long' });
-  const mine = rows.find((r) => r.user_id === myId);
+  const mine = rows.find((r) => r.is_me);
 
   return (
     <Screen scroll={false} padded={false}>
@@ -72,12 +69,12 @@ export default function Leaderboard() {
             New people reached this month. Recognition only — no scores to chase.
           </Text>
 
-          {rows.map((r) => {
+          {rows.map((r, i) => {
             const stage = celestialInfo(r.celestial_stage);
-            const isMe = r.user_id === myId;
+            const isMe = r.is_me;
             return (
               <Card
-                key={r.user_id}
+                key={i}
                 style={StyleSheet.flatten([
                   styles.rowCard,
                   isMe ? { borderColor: colors.accent, borderWidth: 1.5 } : null,
