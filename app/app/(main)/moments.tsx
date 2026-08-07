@@ -215,7 +215,14 @@ function MomentTile({
         </Text>
       ) : null}
 
-      <Pressable onPress={onAppreciate} style={styles.heartRow} hitSlop={6}>
+      <Pressable
+        onPress={onAppreciate}
+        style={styles.heartRow}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityState={{ selected: m.i_appreciated }}
+        accessibilityLabel={m.i_appreciated ? 'Remove your appreciation' : 'Appreciate this moment'}
+      >
         <Ionicons
           name={m.i_appreciated ? 'heart' : 'heart-outline'}
           size={22}

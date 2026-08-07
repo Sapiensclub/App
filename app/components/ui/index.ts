@@ -3,6 +3,7 @@
 export { Button } from './Button';
 export { Card } from './Card';
 export { EmptyState } from './EmptyState';
+export { IconButton } from './IconButton';
 export { Screen } from './Screen';
 export { Sheet } from './Sheet';
 export { Text } from './Text';

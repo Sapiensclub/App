@@ -154,13 +154,13 @@ export default function InboxChat() {
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { borderBottomColor: colors.surfaceEdge }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={26} color={colors.textPrimary} />
         </Pressable>
         <Text variant="heading" weight="bold" numberOfLines={1} style={styles.headerTitle}>
           {name}
         </Text>
-        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12}>
+        <Pressable onPress={() => setMenuOpen(true)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Conversation options">
           <Ionicons name="ellipsis-horizontal" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -222,6 +222,8 @@ export default function InboxChat() {
               <Pressable
                 onPress={onSend}
                 disabled={!draft.trim() || sending}
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
                 style={[styles.sendBtn, { backgroundColor: draft.trim() ? colors.accent : colors.surfaceEdge }]}
               >
                 <Ionicons name="arrow-up" size={22} color={colors.onAccent} />

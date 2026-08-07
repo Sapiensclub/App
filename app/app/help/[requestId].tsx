@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 
-import { Button, Card, Screen, Text } from '@/components/ui';
+import { Button, Card, IconButton, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo } from '@/lib/celestial';
 import {
@@ -395,7 +395,7 @@ function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
   const { colors } = useTheme();
   return (
     <View style={styles.topBar}>
-      <Ionicons name="arrow-back" size={26} color={colors.textPrimary} onPress={onBack} />
+      <IconButton name="arrow-back" label="Back" onPress={onBack} />
       <Text variant="heading" weight="bold" style={styles.topTitle}>
         {title}
       </Text>

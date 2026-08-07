@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Card, EmptyState, Screen, Text } from '@/components/ui';
+import { Card, EmptyState, IconButton, Screen, Text } from '@/components/ui';
 import { celestialInfo } from '@/lib/celestial';
 import { loadMyConnections, type Connection } from '@/lib/connections';
 import { spacing } from '@/theme/tokens';
@@ -27,7 +27,7 @@ export default function Connections() {
   return (
     <Screen scroll={false} padded={false}>
       <View style={styles.topBar}>
-        <Ionicons name="arrow-back" size={26} color={colors.textPrimary} onPress={() => router.back()} />
+        <IconButton name="arrow-back" label="Back" onPress={() => router.back()} />
         <Text variant="heading" weight="bold" style={styles.topTitle}>
           Your connections
         </Text>

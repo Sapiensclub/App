@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Card, EmptyState, Screen, Text } from '@/components/ui';
+import { Card, EmptyState, IconButton, Screen, Text } from '@/components/ui';
 import { celestialInfo } from '@/lib/celestial';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -46,7 +46,7 @@ export default function Leaderboard() {
   return (
     <Screen scroll={false} padded={false}>
       <View style={styles.topBar}>
-        <Ionicons name="arrow-back" size={26} color={colors.textPrimary} onPress={() => router.back()} />
+        <IconButton name="arrow-back" label="Back" onPress={() => router.back()} />
         <Text variant="heading" weight="bold" style={styles.topTitle}>
           {monthName} leaderboard
         </Text>
