@@ -258,8 +258,15 @@ Phase 8/launch. Dashboard is localhost-run for now.
   Copy rules: open pings = category only (never seeker identity); directed pings
   name the asker (PRD 5.5); inbox pushes carry NO content, active-chat pushes do.
   Deploy steps in the migration header + checklist. VERIFIED live 2026-08-10
-  (200 + skipped:true). Testing prep plan = T1 ✅ → T2 EAS preview build
-  (Android-only for the test; Apple Dev deferred) → T3 ✅ → T4 ✅.
+  (200 + skipped:true). Testing prep plan = T1 ✅ → T2 ✅ → T3 ✅ → T4 ✅.
+- **T2: EAS preview build ✅ (2026-08-10, Android-only; Apple Dev deferred)** —
+  eas-cli global, `eas init` (projectId d4347e3a…, owner sapiensclub), Firebase
+  project `sapiens-5517a` + google-services.json (committed; the service-account
+  key is SECRET, uploaded via `eas credentials` → FCM V1, never in repo),
+  expo-updates auto-installed (channel preview → OTA JS fixes via
+  `eas update --channel preview`), env in eas.json. First build crashed at
+  startup — see the expo-asset gotcha in §9; fixed by pinning expo-asset@12,
+  rebuilt, works on device.
 - **T3: feedback channel ✅** — `feedback` table (owner insert/read, status
   new→seen→done admin-only), `lib/feedback.ts` (context: platform+version),
   You tab "Send feedback" sheet, admin `/feedback` triage page + nav link.
@@ -336,6 +343,17 @@ registration. **Owner + lawyer tasks, not code.**
   linked). `create or replace view` can't insert columns mid-list → use DROP+CREATE.
   Supabase blocks bare UPDATE/DELETE without WHERE (even inside functions) → always add
   a WHERE. Enum columns need explicit `::enum_type` cast when set from a CASE of text.
+- **After ANY `expo install`, check for smuggled-in future-SDK packages** before an
+  EAS build: `npm ls expo-modules-core expo-asset` must show ONE version each (all
+  "deduped"), then `npx expo-doctor` must pass. Cause: expo packages declare loose
+  peer deps (`"expo-asset": "*"`) and npm auto-installs the LATEST nested copy —
+  Expo Go masks it (own runtime), but a standalone build compiles the mismatch in
+  and crashes at startup (NoClassDefFoundError, e.g. AnyTypeCache). Fix: `npx expo
+  install <package>` to pin the SDK-correct version at root. Bit us 2026-08-10
+  (expo-audio → expo-asset@57 on SDK 54).
+- **EAS builds read env from eas.json `env` blocks, NOT `.env.local`** (which is
+  gitignored and never uploaded). Preview/production profiles carry the two
+  EXPO_PUBLIC Supabase values. Missing them = crash at startup (env.ts fail-loud).
 - **Keyboard handling: `KeyboardAvoidingView` must use `behavior="padding"` on BOTH
   platforms.** The app is edge-to-edge (SDK 54 default), so Android never auto-resizes
   the window for the keyboard — the old `Platform.OS === 'ios' ? 'padding' : undefined`
