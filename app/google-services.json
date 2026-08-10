@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "618347945970",
+    "project_id": "sapiens-5517a",
+    "storage_bucket": "sapiens-5517a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:618347945970:android:a7c65f3e51c606c9c1d56b",
+        "android_client_info": {
+          "package_name": "club.sapiens.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwp02Zh_wjDZ3AmtG59kU7o958mqKBmGY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
