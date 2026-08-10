@@ -228,8 +228,20 @@ Phase 8/launch. Dashboard is localhost-run for now.
   EAS build) wired in `(main)/_layout`; added `expo-notifications`/`expo-device`. PostHog was
   already wired (add key). **`docs/PRELAUNCH_CHECKLIST.md`** = the launch source of truth.
 
-**P1 features still owed (not launch blockers):** voice notes + photos in chat (text-only so
-far); leaderboard area filters (need stored home area). **Launch tasks:** see
+### Post-Phase-8 chunks (2026-08-10)
+- **Android keyboard fix** — `KeyboardAvoidingView` `behavior="padding"` on BOTH
+  platforms app-wide (edge-to-edge Android never auto-resizes); `Sheet` lifts itself.
+- **Chat photos ✅ (PRD 4.4/6.6)** — private `chat-media` Storage bucket (5MB,
+  images only), storage RLS = participants of that open chat; `messages.media_url`
+  stores the storage PATH; `loadMessages` batch-signs 1h URLs. Camera/library
+  attach button + photo bubbles + full-screen viewer in BOTH chats
+  (`components/chat/PhotoBubble.tsx`, `lib/photo/chatPhoto.ts`). Inbox preview
+  shows "📷 Photo". Admin report evidence renders photos (service-signed).
+  `retention_sweep` deletes purged chats' photos from storage (inbox permanent).
+  EXIF/GPS stripped by re-encode (quality 0.6).
+
+**P1 features still owed (not launch blockers):** voice notes in chat (photos done);
+leaderboard area filters (need stored home area). **Launch tasks:** see
 `docs/PRELAUNCH_CHECKLIST.md` (teardown, confirm-email ON, EAS build + push send Edge Function,
 replace KYC/OTP/SMS stubs, legal/DPDP/POCSO/DLT gate).
 
@@ -245,8 +257,8 @@ features above.
 
 ## 6. Deliberately deferred (still owed within P1)
 
-- **Chat photos + voice notes** (PRD 4.4/6.6) — active-request AND inbox chats are
-  text-only so far. Voice notes matter for accessibility. Small follow-up.
+- **Chat voice notes** (PRD 4.4/6.6) — photos shipped 2026-08-10; voice notes still
+  owed (they matter for accessibility). Same `chat-media` bucket, extend mime list.
 - **Leaderboard area filters** (zip/city/state/country) — need a stored user "home area";
   v1 is global (fine for closed-community launch).
 - **Milestone notifications to connections** (PRD 5.8) — Phase 6 with the bell.

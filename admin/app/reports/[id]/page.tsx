@@ -24,12 +24,20 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
   const nameOf = new Map((profs ?? []).map((p) => [p.id, p.display_name as string | null]));
 
   // Flagged chat evidence (PRD 6.2): active-request chats are server-readable.
-  let messages: { id: string; sender_id: string; body: string | null; type: string; created_at: string }[] = [];
+  let messages: {
+    id: string;
+    sender_id: string;
+    body: string | null;
+    type: string;
+    media_url: string | null;
+    created_at: string;
+  }[] = [];
   const senderName = new Map<string, string | null>(nameOf);
+  const signedMedia = new Map<string, string>();
   if (report.context === 'chat' && report.evidence_chat_id) {
     const { data: msgs } = await svc
       .from('messages')
-      .select('id, sender_id, body, type, created_at')
+      .select('id, sender_id, body, type, media_url, created_at')
       .eq('chat_id', report.evidence_chat_id)
       .order('created_at');
     messages = msgs ?? [];
@@ -38,6 +46,15 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
     if (missing.length) {
       const { data: more } = await svc.from('profiles').select('id, display_name').in('id', missing);
       for (const p of more ?? []) senderName.set(p.id, p.display_name as string | null);
+    }
+    // Photo evidence lives in the private chat-media bucket; the service role
+    // signs short-lived URLs so reviewers can see it (an hour is plenty).
+    const paths = messages.filter((m) => m.type === 'photo' && m.media_url).map((m) => m.media_url!);
+    if (paths.length) {
+      const { data: urls } = await svc.storage.from('chat-media').createSignedUrls(paths, 3600);
+      for (const u of urls ?? []) {
+        if (u.path && u.signedUrl) signedMedia.set(u.path, u.signedUrl);
+      }
     }
   }
 
@@ -84,10 +101,22 @@ export default async function ReportDetail({ params }: { params: Promise<{ id: s
               {messages.map((m) => (
                 <div key={m.id} className="text-sm">
                   <span className="font-semibold">{senderName.get(m.sender_id) ?? 'Member'}: </span>
-                  <span>{m.type === 'text' ? m.body : `[${m.type}]`}</span>
+                  <span>{m.type === 'text' ? m.body : m.type === 'photo' ? '' : `[${m.type}]`}</span>
                   <span className="ml-2 text-xs text-[#8A857C]">
                     {new Date(m.created_at).toLocaleTimeString()}
                   </span>
+                  {m.type === 'photo' ? (
+                    m.media_url && signedMedia.get(m.media_url) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={signedMedia.get(m.media_url)}
+                        alt="Photo sent in the flagged chat"
+                        className="mt-1 max-h-64 rounded-lg border border-[#E7DFCF]"
+                      />
+                    ) : (
+                      <span className="italic text-[#8A857C]">[photo unavailable]</span>
+                    )
+                  ) : null}
                 </div>
               ))}
             </div>

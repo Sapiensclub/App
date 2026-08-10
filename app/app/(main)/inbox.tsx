@@ -50,10 +50,12 @@ export default function Inbox() {
             const name = threadName(t);
             const frozen = t.connection_status === 'disconnected' || !!t.closed_at;
             const preview =
-              t.last_type && t.last_type !== 'text'
-                ? '📎 Attachment'
-                : t.last_body ??
-                  (frozen ? 'This conversation is frozen' : 'Say hello 👋');
+              t.last_type === 'photo'
+                ? '📷 Photo'
+                : t.last_type && t.last_type !== 'text'
+                  ? '📎 Attachment'
+                  : t.last_body ??
+                    (frozen ? 'This conversation is frozen' : 'Say hello 👋');
             const mine = t.last_sender === myId;
             return (
               <Pressable
@@ -88,7 +90,7 @@ export default function Inbox() {
                       numberOfLines={1}
                       style={{ flex: 1 }}
                     >
-                      {mine && t.last_body ? 'You: ' : ''}
+                      {mine && t.last_type ? 'You: ' : ''}
                       {preview}
                     </Text>
                     {t.unread > 0 ? (

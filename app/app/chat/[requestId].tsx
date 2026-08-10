@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PhotoBubble } from '@/components/chat/PhotoBubble';
 import { Button, Sheet, Text, TextField } from '@/components/ui';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -21,9 +22,11 @@ import {
   loadChatForRequest,
   loadMessages,
   loadParticipantNames,
+  sendPhoto,
   sendText,
   type Message,
 } from '@/lib/chat/chat';
+import { pickChatPhoto, uploadChatPhoto } from '@/lib/photo/chatPhoto';
 import { loadMatchForRequest, type MatchDetails } from '@/lib/help/matching';
 import { useRealtime } from '@/lib/realtime';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -43,6 +46,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendingPhoto, setSendingPhoto] = useState(false);
 
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [reason, setReason] = useState('');
@@ -102,6 +106,30 @@ export default function Chat() {
       Alert.alert('Message not sent', 'Please try again.');
     } finally {
       setSending(false);
+    }
+  }
+
+  function onAttach() {
+    Alert.alert('Send a photo', undefined, [
+      { text: 'Take photo', onPress: () => sendPickedPhoto(true) },
+      { text: 'Choose from library', onPress: () => sendPickedPhoto(false) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
+  async function sendPickedPhoto(fromCamera: boolean) {
+    if (!chatId || !myId) return;
+    const base64 = await pickChatPhoto(fromCamera);
+    if (!base64) return;
+    setSendingPhoto(true);
+    try {
+      const path = await uploadChatPhoto(chatId, base64);
+      await sendPhoto(chatId, myId, path);
+      await refreshMessages(chatId);
+    } catch {
+      Alert.alert('Photo not sent', 'Please try again.');
+    } finally {
+      setSendingPhoto(false);
     }
   }
 
@@ -175,14 +203,19 @@ export default function Chat() {
                     <View
                       style={[
                         styles.bubble,
+                        item.type === 'photo' && styles.bubblePhoto,
                         mine
                           ? { backgroundColor: colors.accent, borderBottomRightRadius: 4 }
                           : { backgroundColor: colors.surface, borderColor: colors.surfaceEdge, borderWidth: 1, borderBottomLeftRadius: 4 },
                       ]}
                     >
-                      <Text variant="body" tone={mine ? 'onAccent' : 'primary'}>
-                        {item.body}
-                      </Text>
+                      {item.type === 'photo' ? (
+                        <PhotoBubble url={item.media_signed_url ?? null} />
+                      ) : (
+                        <Text variant="body" tone={mine ? 'onAccent' : 'primary'}>
+                          {item.type === 'text' ? item.body : '📎 Attachment'}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -198,6 +231,19 @@ export default function Chat() {
             </View>
           ) : (
             <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.surfaceEdge }]}>
+              <Pressable
+                onPress={onAttach}
+                disabled={sendingPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Send a photo"
+                style={styles.attachBtn}
+              >
+                {sendingPhoto ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Ionicons name="image-outline" size={26} color={colors.textSecondary} />
+                )}
+              </Pressable>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
                 placeholder="Message"
@@ -272,6 +318,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  bubblePhoto: { paddingHorizontal: 4, paddingVertical: 4 },
+  attachBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

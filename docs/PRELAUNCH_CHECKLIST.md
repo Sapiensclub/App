@@ -76,8 +76,8 @@ These are **not code** and must be in place before real users:
 
 ## Still owed within P1 (features, not launch-blockers)
 
-- **Voice notes + photos in chat** (PRD 4.4/6.6) — active-request and inbox chats are
-  text-only. Voice notes are accessibility-relevant; a good next build.
+- **Voice notes in chat** (PRD 4.4/6.6) — photos are done (2026-08-10); voice notes
+  are accessibility-relevant; a good next build.
 - **Leaderboard area filters** — need a stored "home area"; v1 is global (fine for a
   closed-community launch).
 
