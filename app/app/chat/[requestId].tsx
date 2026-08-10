@@ -6,7 +6,6 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -148,7 +147,7 @@ export default function Chat() {
       ) : (
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           keyboardVerticalOffset={8}
         >
           <FlatList

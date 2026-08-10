@@ -3,7 +3,6 @@ import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -168,7 +167,7 @@ export default function Onboarding() {
   if (phase === 'contacts') {
     return (
       <Screen>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView behavior="padding">
           <View style={styles.contactsHeader}>
             <View style={[styles.iconCircle, { backgroundColor: colors.accentSoft }]}>
               <Ionicons name="people-outline" size={40} color={colors.accent} />

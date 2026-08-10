@@ -5,7 +5,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -83,7 +82,7 @@ export function VerifyFlow({ visible, onClose, onVerified }: Props) {
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
         >
           {step === 'intro' ? (
             <View style={styles.body}>

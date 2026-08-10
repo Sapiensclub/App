@@ -5,7 +5,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -126,7 +125,7 @@ export function TrustedContactsEditor({ visible, onClose }: Props) {
         ) : (
           <KeyboardAvoidingView
             style={styles.flex}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
           >
             <ScrollView
               contentContainerStyle={styles.content}

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -79,7 +78,7 @@ export default function SignIn() {
     <Screen scroll={false}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <View style={styles.body}>
           <View style={styles.header}>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { radius, spacing } from '@/theme/tokens';
@@ -16,6 +16,8 @@ type SheetProps = {
 /**
  * A bottom sheet for lightweight, focused choices (confirmations, pickers).
  * Slides up over a dimmed backdrop; tap outside or the handle area to close.
+ * Lifts itself above the keyboard when a child input focuses — needed
+ * explicitly because Android (edge-to-edge) no longer resizes for keyboards.
  */
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
   const { colors } = useTheme();
@@ -29,7 +31,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
       statusBarTranslucent
     >
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <View style={styles.sheetWrap} pointerEvents="box-none">
+      <KeyboardAvoidingView style={styles.sheetWrap} behavior="padding" pointerEvents="box-none">
         <SafeAreaView edges={['bottom']} style={[styles.sheet, { backgroundColor: colors.bg }]}>
           <View style={[styles.handle, { backgroundColor: colors.surfaceEdge }]} />
           {title ? (
@@ -39,7 +41,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
           ) : null}
           {children}
         </SafeAreaView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

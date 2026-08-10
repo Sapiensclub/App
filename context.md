@@ -295,6 +295,11 @@ registration. **Owner + lawyer tasks, not code.**
   linked). `create or replace view` can't insert columns mid-list → use DROP+CREATE.
   Supabase blocks bare UPDATE/DELETE without WHERE (even inside functions) → always add
   a WHERE. Enum columns need explicit `::enum_type` cast when set from a CASE of text.
+- **Keyboard handling: `KeyboardAvoidingView` must use `behavior="padding"` on BOTH
+  platforms.** The app is edge-to-edge (SDK 54 default), so Android never auto-resizes
+  the window for the keyboard — the old `Platform.OS === 'ios' ? 'padding' : undefined`
+  pattern leaves inputs hidden behind the keyboard on Android. Fixed app-wide
+  2026-08-10; `Sheet` lifts itself via its own internal KeyboardAvoidingView.
 - **expo-router typed routes**: adding a new route makes `tsc` fail on the path literal
   until types regen. Regen by running the dev server briefly (background `expo start`,
   wait for `.expo/types/router.d.ts`, kill). `expo export` does NOT regen them.
