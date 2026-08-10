@@ -239,9 +239,18 @@ Phase 8/launch. Dashboard is localhost-run for now.
   shows "📷 Photo". Admin report evidence renders photos (service-signed).
   `retention_sweep` deletes purged chats' photos from storage (inbox permanent).
   EXIF/GPS stripped by re-encode (quality 0.6).
+- **Chat voice notes ✅ (PRD 4.4/6.6 — completes A1)** — `expo-audio` (~1.1.1, in
+  Expo Go; plugin + mic permission string in app.json). Tap-based recorder (NOT
+  hold — 70-year rule): mic button → timer row + Cancel/Send, 120s cap
+  (`components/chat/VoiceRecorder.tsx`); playback bubble w/ progress + duration
+  (`components/chat/VoiceBubble.tsx`); duration seconds ride in `messages.body`.
+  Upload via `lib/photo/chatVoice.ts` (m4a on phones, webm on web — cross-platform
+  playback of web recordings not guaranteed). Same bucket/policies/signing/retention
+  as photos; migration only extends bucket mime types to audio. Inbox preview
+  "🎤 Voice note"; admin evidence renders an audio player.
 
-**P1 features still owed (not launch blockers):** voice notes in chat (photos done);
-leaderboard area filters (need stored home area). **Launch tasks:** see
+**P1 features still owed (not launch blockers):** leaderboard area filters (need
+stored home area) — chat photos + voice are DONE. **Launch tasks:** see
 `docs/PRELAUNCH_CHECKLIST.md` (teardown, confirm-email ON, EAS build + push send Edge Function,
 replace KYC/OTP/SMS stubs, legal/DPDP/POCSO/DLT gate).
 
@@ -257,8 +266,7 @@ features above.
 
 ## 6. Deliberately deferred (still owed within P1)
 
-- **Chat voice notes** (PRD 4.4/6.6) — photos shipped 2026-08-10; voice notes still
-  owed (they matter for accessibility). Same `chat-media` bucket, extend mime list.
+- ~~Chat photos + voice notes~~ ✅ shipped 2026-08-10 (see §4 Post-Phase-8 chunks).
 - **Leaderboard area filters** (zip/city/state/country) — need a stored user "home area";
   v1 is global (fine for closed-community launch).
 - **Milestone notifications to connections** (PRD 5.8) — Phase 6 with the bell.

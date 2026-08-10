@@ -14,10 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PhotoBubble } from '@/components/chat/PhotoBubble';
+import { VoiceBubble } from '@/components/chat/VoiceBubble';
+import { VoiceRecorder } from '@/components/chat/VoiceRecorder';
 import { Button, Sheet, Text, TextField } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
-import { loadMessages, sendPhoto, sendText, type Message } from '@/lib/chat/chat';
+import { loadMessages, sendPhoto, sendText, sendVoice, type Message } from '@/lib/chat/chat';
 import { pickChatPhoto, uploadChatPhoto } from '@/lib/photo/chatPhoto';
+import { uploadChatVoice } from '@/lib/photo/chatVoice';
 import {
   blockConnection,
   disconnectConnection,
@@ -43,6 +46,7 @@ export default function InboxChat() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [sendingPhoto, setSendingPhoto] = useState(false);
+  const [recordingVoice, setRecordingVoice] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [nick, setNick] = useState('');
@@ -119,6 +123,13 @@ export default function InboxChat() {
     } finally {
       setSendingPhoto(false);
     }
+  }
+
+  async function onSendVoice(localUri: string, seconds: number) {
+    if (!chatId || !myId) return;
+    const path = await uploadChatVoice(chatId, localUri);
+    await sendVoice(chatId, myId, path, seconds);
+    setMessages(await loadMessages(chatId));
   }
 
   async function onSaveNickname() {
@@ -222,6 +233,12 @@ export default function InboxChat() {
                   >
                     {item.type === 'photo' ? (
                       <PhotoBubble url={item.media_signed_url ?? null} />
+                    ) : item.type === 'voice' ? (
+                      <VoiceBubble
+                        url={item.media_signed_url ?? null}
+                        mine={mine}
+                        durationHint={item.body ? Number(item.body) : null}
+                      />
                     ) : (
                       <Text variant="body" tone={mine ? 'onAccent' : 'primary'}>
                         {item.type === 'text' ? item.body : '📎 Attachment'}
@@ -241,37 +258,48 @@ export default function InboxChat() {
             </View>
           ) : (
             <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.surfaceEdge }]}>
-              <Pressable
-                onPress={onAttach}
-                disabled={sendingPhoto}
-                accessibilityRole="button"
-                accessibilityLabel="Send a photo"
-                style={styles.attachBtn}
-              >
-                {sendingPhoto ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                ) : (
-                  <Ionicons name="image-outline" size={26} color={colors.textSecondary} />
-                )}
-              </Pressable>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
-                placeholder="Message"
-                placeholderTextColor={colors.textFaint}
-                value={draft}
-                onChangeText={setDraft}
-                multiline
-                editable={!sending}
+              {!recordingVoice && (
+                <Pressable
+                  onPress={onAttach}
+                  disabled={sendingPhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send a photo"
+                  style={styles.attachBtn}
+                >
+                  {sendingPhoto ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Ionicons name="image-outline" size={26} color={colors.textSecondary} />
+                  )}
+                </Pressable>
+              )}
+              {!recordingVoice && (
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary }]}
+                  placeholder="Message"
+                  placeholderTextColor={colors.textFaint}
+                  value={draft}
+                  onChangeText={setDraft}
+                  multiline
+                  editable={!sending}
+                />
+              )}
+              <VoiceRecorder
+                disabled={sending || sendingPhoto}
+                onRecordingChange={setRecordingVoice}
+                onSend={onSendVoice}
               />
-              <Pressable
-                onPress={onSend}
-                disabled={!draft.trim() || sending}
-                accessibilityRole="button"
-                accessibilityLabel="Send message"
-                style={[styles.sendBtn, { backgroundColor: draft.trim() ? colors.accent : colors.surfaceEdge }]}
-              >
-                <Ionicons name="arrow-up" size={22} color={colors.onAccent} />
-              </Pressable>
+              {!recordingVoice && (
+                <Pressable
+                  onPress={onSend}
+                  disabled={!draft.trim() || sending}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send message"
+                  style={[styles.sendBtn, { backgroundColor: draft.trim() ? colors.accent : colors.surfaceEdge }]}
+                >
+                  <Ionicons name="arrow-up" size={22} color={colors.onAccent} />
+                </Pressable>
+              )}
             </View>
           )}
         </KeyboardAvoidingView>

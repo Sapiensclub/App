@@ -96,6 +96,27 @@ export async function sendPhoto(chatId: string, senderId: string, mediaPath: str
   if (error) throw error;
 }
 
+/**
+ * Send an already-uploaded voice note (mediaPath from uploadChatVoice).
+ * body carries the length in whole seconds — so bubbles can show a duration
+ * before the audio itself loads.
+ */
+export async function sendVoice(
+  chatId: string,
+  senderId: string,
+  mediaPath: string,
+  seconds: number,
+): Promise<void> {
+  const { error } = await supabase.from('messages').insert({
+    chat_id: chatId,
+    sender_id: senderId,
+    type: 'voice',
+    media_url: mediaPath,
+    body: String(Math.max(1, Math.round(seconds))),
+  });
+  if (error) throw error;
+}
+
 /** The one-action mid-request escape hatch (PRD 6.13). */
 export async function cancelReportBlock(matchId: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_report_block', {

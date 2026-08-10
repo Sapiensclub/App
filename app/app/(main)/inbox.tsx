@@ -52,10 +52,12 @@ export default function Inbox() {
             const preview =
               t.last_type === 'photo'
                 ? '📷 Photo'
-                : t.last_type && t.last_type !== 'text'
-                  ? '📎 Attachment'
-                  : t.last_body ??
-                    (frozen ? 'This conversation is frozen' : 'Say hello 👋');
+                : t.last_type === 'voice'
+                  ? '🎤 Voice note'
+                  : t.last_type && t.last_type !== 'text'
+                    ? '📎 Attachment'
+                    : t.last_body ??
+                      (frozen ? 'This conversation is frozen' : 'Say hello 👋');
             const mine = t.last_sender === myId;
             return (
               <Pressable
