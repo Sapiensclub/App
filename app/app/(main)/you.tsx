@@ -11,10 +11,11 @@ import { EditableAvatar } from '@/components/profile/EditableAvatar';
 import { EditProfile } from '@/components/profile/EditProfile';
 import { HelperPreferences } from '@/components/profile/HelperPreferences';
 import { TrustedContactsEditor } from '@/components/profile/TrustedContactsEditor';
-import { Button, Card, Screen, Text } from '@/components/ui';
+import { Button, Card, Screen, Sheet, Text, TextField } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { celestialInfo, journeyProgress, MILESTONES } from '@/lib/celestial';
 import { loadMyConnections } from '@/lib/connections';
+import { sendFeedback } from '@/lib/feedback';
 import { useProfile } from '@/lib/profile/ProfileProvider';
 import { supabase } from '@/lib/supabase';
 import { radius as radii, spacing } from '@/theme/tokens';
@@ -38,6 +39,10 @@ export default function You() {
 
   const [waysLabels, setWaysLabels] = useState<string[]>([]);
   const [connectionCount, setConnectionCount] = useState(0);
+
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
 
   const { width } = useWindowDimensions();
   const journeyWidth = Math.min(width - spacing.xl * 2 - spacing.xl * 2, 320);
@@ -90,6 +95,21 @@ export default function You() {
       loadMyConnections().then((c) => setConnectionCount(c.length));
     }, [refetch, loadWays]),
   );
+
+  async function onSendFeedback() {
+    if (!uid || !feedbackText.trim()) return;
+    setSendingFeedback(true);
+    try {
+      await sendFeedback(uid, feedbackText);
+      setFeedbackOpen(false);
+      setFeedbackText('');
+      Alert.alert('Thank you 🙏', 'Your note went straight to the team.');
+    } catch {
+      Alert.alert('Could not send', 'Please try again in a moment.');
+    } finally {
+      setSendingFeedback(false);
+    }
+  }
 
   async function onSignOut() {
     setBusy(true);
@@ -286,6 +306,12 @@ export default function You() {
           label="Ways I help & preferences"
           onPress={() => setWaysOpen(true)}
         />
+        <Divider />
+        <LinkRow
+          icon="chatbubble-ellipses-outline"
+          label="Send feedback"
+          onPress={() => setFeedbackOpen(true)}
+        />
       </Card>
 
       {!loading && !verified ? (
@@ -324,6 +350,28 @@ export default function You() {
         visible={contactsOpen}
         onClose={() => setContactsOpen(false)}
       />
+
+      <Sheet visible={feedbackOpen} onClose={() => setFeedbackOpen(false)} title="Send feedback">
+        <Text variant="body" tone="secondary">
+          Found something confusing or broken? Tell us plainly — it goes
+          straight to the team.
+        </Text>
+        <TextField
+          label="What happened?"
+          placeholder="e.g. The waiting screen got stuck after I cancelled"
+          value={feedbackText}
+          onChangeText={setFeedbackText}
+          multiline
+          editable={!sendingFeedback}
+          style={styles.feedbackInput}
+        />
+        <Button
+          label="Send"
+          onPress={onSendFeedback}
+          busy={sendingFeedback}
+          disabled={!feedbackText.trim()}
+        />
+      </Sheet>
     </Screen>
   );
 }
@@ -461,4 +509,5 @@ const styles = StyleSheet.create({
   verifyCta: { paddingTop: spacing.xl, gap: spacing.sm },
   note: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl },
   signOut: { paddingTop: spacing.lg, paddingBottom: spacing.xl },
+  feedbackInput: { minHeight: 96, textAlignVertical: 'top' },
 });

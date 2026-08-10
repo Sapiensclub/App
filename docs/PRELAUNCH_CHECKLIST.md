@@ -16,6 +16,13 @@ lawyer tasks. Nothing here should be skipped for a public launch.
 - [ ] **Turn Supabase "Confirm email" back ON** (Auth → Providers → Email). It was
       OFF only for Phase 0 testing. Consider switching auth to phone-OTP for launch
       (the seam is `app/lib/auth/phoneOtp.ts`).
+- [ ] **Custom SMTP for auth emails** (Auth → SMTP): the built-in Supabase email
+      service is heavily rate-limited — fine for closed testing, not for real
+      users. The password-reset flow depends on it (the "Reset password" template
+      must keep the {{ .Token }} 6-digit code).
+- [ ] **Rotate PUSH_WEBHOOK_SECRET** (it appeared in a testing screenshot):
+      `npx supabase secrets set PUSH_WEBHOOK_SECRET=<new>` + update the
+      `push_fn_secret` row in `dispatch_config`.
 - [ ] **Enable the pg_cron jobs** and confirm both are scheduled:
       `sapiens-dispatch-tick` (every minute) and `sapiens-retention-sweep` (daily).
 - [ ] **PostHog**: add `EXPO_PUBLIC_POSTHOG_KEY` to `app/.env.local` (analytics is

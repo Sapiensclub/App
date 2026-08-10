@@ -257,8 +257,18 @@ Phase 8/launch. Dashboard is localhost-run for now.
   staged-disclosure-safe copy, Expo Push API, prunes DeviceNotRegistered).
   Copy rules: open pings = category only (never seeker identity); directed pings
   name the asker (PRD 5.5); inbox pushes carry NO content, active-chat pushes do.
-  Deploy steps in the migration header + checklist. Testing prep plan = T1 (this)
-  → T2 EAS preview build → T3 feedback channel → T4 forgot password.
+  Deploy steps in the migration header + checklist. VERIFIED live 2026-08-10
+  (200 + skipped:true). Testing prep plan = T1 ✅ → T2 EAS preview build
+  (Android-only for the test; Apple Dev deferred) → T3 ✅ → T4 ✅.
+- **T3: feedback channel ✅** — `feedback` table (owner insert/read, status
+  new→seen→done admin-only), `lib/feedback.ts` (context: platform+version),
+  You tab "Send feedback" sheet, admin `/feedback` triage page + nav link.
+- **T4: forgot password ✅** — email 6-DIGIT CODE flow (NOT magic link — no
+  deep-link fragility): `requestPasswordReset` (resetPasswordForEmail) +
+  `resetPasswordWithCode` (verifyOtp type=recovery → updateUser). Auth screen
+  modes signin/signup/forgot/reset. ⚠️ REQUIRES the Supabase "Reset password"
+  email template to include {{ .Token }} — owner dashboard step. Default
+  Supabase email service is rate-limited (fine for testing; real SMTP at launch).
 
 **P1 features still owed (not launch blockers):** leaderboard area filters (need
 stored home area) — chat photos + voice are DONE. **Launch tasks:** see

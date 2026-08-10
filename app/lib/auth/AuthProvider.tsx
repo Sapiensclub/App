@@ -23,6 +23,13 @@ type AuthContextValue = {
   signUpWithPassword: (email: string, password: string) => Promise<SignUpResult>;
   /** Sign in with email + password. */
   signInWithPassword: (email: string, password: string) => Promise<void>;
+  /**
+   * Email a 6-digit recovery code. Requires the Supabase "Reset password"
+   * email template to include {{ .Token }} (see docs/PRELAUNCH_CHECKLIST.md).
+   */
+  requestPasswordReset: (email: string) => Promise<void>;
+  /** Verify the emailed code + set the new password. Signs the user in. */
+  resetPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -96,6 +103,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) throw error;
       track('signed_in', { method: 'email_password' });
+    },
+    async requestPasswordReset(email) {
+      // No redirectTo: we use the CODE path (verifyOtp), not a magic link —
+      // codes work the same in Expo Go, a store build, and on web.
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) throw error;
+      track('password_reset_requested');
+    },
+    async resetPasswordWithCode(email, code, newPassword) {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: code.trim(),
+        type: 'recovery',
+      });
+      if (verifyError) throw verifyError;
+      // verifyOtp established a session; now store the new password on it.
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateError) throw updateError;
+      track('password_reset_completed');
     },
     async signOut() {
       const { error } = await supabase.auth.signOut();
