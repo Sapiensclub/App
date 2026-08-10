@@ -10,11 +10,19 @@
     },
     "preview": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "PASTE-YOUR-SUPABASE-URL-HERE",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "PASTE-YOUR-PUBLISHABLE-KEY-HERE"
+      }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "PASTE-YOUR-SUPABASE-URL-HERE",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "PASTE-YOUR-PUBLISHABLE-KEY-HERE"
+      }
     }
   },
   "submit": {
