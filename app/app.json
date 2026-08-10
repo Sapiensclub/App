@@ -77,7 +77,8 @@
         {
           "microphonePermission": "Sapiens uses your microphone so you can send voice notes in chat."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
