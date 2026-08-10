@@ -249,6 +249,17 @@ Phase 8/launch. Dashboard is localhost-run for now.
   as photos; migration only extends bucket mime types to audio. Inbox preview
   "🎤 Voice note"; admin evidence renders an audio player.
 
+- **T1: push send side ✅ (pre-testing chunk)** — AFTER INSERT triggers on
+  `dispatch_targets` (the ping!), `notifications`, `messages` → `push_enqueue()`
+  (SECURITY DEFINER, fire-and-forget `pg_net` POST, exception-guarded, silently
+  OFF until `dispatch_config` keys `push_fn_url`+`push_fn_secret` exist) →
+  `supabase/functions/push-send` (secret-header auth, resolves recipients +
+  staged-disclosure-safe copy, Expo Push API, prunes DeviceNotRegistered).
+  Copy rules: open pings = category only (never seeker identity); directed pings
+  name the asker (PRD 5.5); inbox pushes carry NO content, active-chat pushes do.
+  Deploy steps in the migration header + checklist. Testing prep plan = T1 (this)
+  → T2 EAS preview build → T3 feedback channel → T4 forgot password.
+
 **P1 features still owed (not launch blockers):** leaderboard area filters (need
 stored home area) — chat photos + voice are DONE. **Launch tasks:** see
 `docs/PRELAUNCH_CHECKLIST.md` (teardown, confirm-email ON, EAS build + push send Edge Function,

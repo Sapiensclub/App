@@ -34,9 +34,13 @@ Each is isolated behind a seam so it's a small swap:
 - [ ] **Phone OTP** — `app/lib/auth/phoneOtp.ts` (stub) + a real SMS provider.
 - [ ] **SOS alerts** — currently device-native SMS (`app/lib/sos/sosAlerter.ts`).
       Optionally add server-sent SMS once a provider + DLT registration exist.
-- [ ] **Push send side** — an Edge Function that reads new `notifications` rows and
-      POSTs to the Expo Push API using `push_tokens`. Client registration is
-      **[code done]** (`app/lib/push.ts`) and activates automatically in an EAS build.
+- [ ] **Push send side** — **[code done]** (2026-08-10): DB triggers (pings,
+      bell notifications, chat messages) → `pg_net` → `push-send` Edge Function →
+      Expo Push API, with dead-token cleanup. To activate: deploy the function,
+      set `PUSH_WEBHOOK_SECRET` (+ optional `EXPO_ACCESS_TOKEN`), and set the
+      `push_fn_url` / `push_fn_secret` keys in `dispatch_config` (exact SQL in
+      the T1 migration header). Client registration is **[code done]**
+      (`app/lib/push.ts`) and activates automatically in an EAS build.
 
 ## 3. Build & ship the app (EAS)
 
