@@ -12,16 +12,16 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "PASTE-YOUR-SUPABASE-URL-HERE",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "PASTE-YOUR-PUBLISHABLE-KEY-HERE"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fwgdnfhmdidjcvsbgwjb.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_iNQFyex9O_ebTNOCrsSYJg_LhJdwXMI"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "PASTE-YOUR-SUPABASE-URL-HERE",
-        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "PASTE-YOUR-PUBLISHABLE-KEY-HERE"
+        "EXPO_PUBLIC_SUPABASE_URL": "https://fwgdnfhmdidjcvsbgwjb.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_iNQFyex9O_ebTNOCrsSYJg_LhJdwXMI"
       }
     }
   },
