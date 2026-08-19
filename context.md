@@ -277,6 +277,21 @@ Phase 8/launch. Dashboard is localhost-run for now.
   email template to include {{ .Token }} — owner dashboard step. Default
   Supabase email service is rate-limited (fine for testing; real SMTP at launch).
 
+### Test-phase iteration 1 (2026-08-19, from owner testing)
+- **Single "When do you need help?" question ✅** — Right now / Today / Pick a
+  time (existing presets). Urgency is DERIVED, never asked: right_now→urgent,
+  today→everyday, scheduled ≤4h away→everyday else casual. The separate "How
+  soon?" section is gone — contradictory combos are impossible. Category still
+  pre-fills the control. Pure client change, no backend impact.
+- **Richer candidate card ✅** — `request_candidates` + the confirm card now
+  show: verified badge, celestial stage, trust stars, distance, the helper's
+  bio, "N neighbours helped" (unique_helps) + member since
+  (migration 20260819100000, DROP+CREATE per the view rule).
+- **Online-help mode** — designed (3 chunks: online request + radius-free
+  dispatch; Start→Done flow + link-sharing in chat; helper opt-in toggle);
+  owner deferred — revisit after the test window.
+- JS-only fixes reach installed testers via `eas update --channel preview`.
+
 **P1 features still owed (not launch blockers):** leaderboard area filters (need
 stored home area) — chat photos + voice are DONE. **Launch tasks:** see
 `docs/PRELAUNCH_CHECKLIST.md` (teardown, confirm-email ON, EAS build + push send Edge Function,

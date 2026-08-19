@@ -40,6 +40,9 @@ export type Candidate = {
   trust_rating_avg: number | null;
   member_since: string;
   approx_distance_m: number | null;
+  /** "Has helped N neighbours" — the strongest trust signal (server-computed). */
+  unique_helps: number;
+  bio: string | null;
 };
 
 export type MatchDetails = {

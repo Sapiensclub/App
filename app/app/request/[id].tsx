@@ -469,6 +469,10 @@ export default function RequestWaiting() {
   // ── A hand is raised: confirm or decline (veto, not pick) ─────────────────
   if (status === 'open' && candidate) {
     const stage = celestialInfo(candidate.celestial_stage);
+    const memberSince = new Date(candidate.member_since).toLocaleDateString(undefined, {
+      month: 'short',
+      year: 'numeric',
+    });
     return (
       <Screen>
         <View style={styles.body}>
@@ -483,9 +487,12 @@ export default function RequestWaiting() {
                 <Ionicons name="person" size={36} color={colors.accent} />
               </View>
             )}
-            <Text variant="heading" weight="bold" center style={{ marginTop: spacing.md }}>
-              {candidate.display_name ?? 'A verified neighbour'}
-            </Text>
+            <View style={styles.nameRow}>
+              <Text variant="heading" weight="bold" center>
+                {candidate.display_name ?? 'A verified neighbour'}
+              </Text>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+            </View>
             <View style={styles.stageRow}>
               <Ionicons name={stage.icon} size={16} color={colors.textSecondary} />
               <Text variant="small" tone="secondary">
@@ -498,6 +505,32 @@ export default function RequestWaiting() {
                 About {distanceLabel(candidate.approx_distance_m)} away
               </Text>
             ) : null}
+
+            {candidate.bio ? (
+              <Text variant="body" tone="secondary" center style={styles.candidateBio}>
+                &ldquo;{candidate.bio}&rdquo;
+              </Text>
+            ) : null}
+
+            <View style={[styles.factsRow, { borderTopColor: colors.surfaceEdge }]}>
+              <View style={styles.fact}>
+                <Text variant="heading" weight="extrabold" tone="accent" style={styles.factNum}>
+                  {candidate.unique_helps}
+                </Text>
+                <Text variant="small" tone="secondary" center>
+                  {candidate.unique_helps === 1 ? 'neighbour helped' : 'neighbours helped'}
+                </Text>
+              </View>
+              <View style={[styles.factDivider, { backgroundColor: colors.surfaceEdge }]} />
+              <View style={styles.fact}>
+                <Text variant="heading" weight="extrabold" style={styles.factNum}>
+                  {memberSince}
+                </Text>
+                <Text variant="small" tone="secondary" center>
+                  member since
+                </Text>
+              </View>
+            </View>
           </Card>
           <Text variant="small" tone="faint" center style={styles.privacyNote}>
             Confirm to share your exact location and open a chat. Decline to wait
@@ -644,6 +677,19 @@ const styles = StyleSheet.create({
   footer: { gap: spacing.md, paddingBottom: spacing.lg },
   raisedTitle: { paddingTop: spacing.xl },
   candidateCard: { alignItems: 'center', marginTop: spacing.xl },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
+  candidateBio: { marginTop: spacing.md, paddingHorizontal: spacing.md },
+  factsRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: 1,
+  },
+  fact: { flex: 1, alignItems: 'center', gap: 2 },
+  factNum: { fontVariant: ['tabular-nums'] },
+  factDivider: { width: 1, height: 36 },
   privacyNote: { paddingTop: spacing.lg, paddingHorizontal: spacing.lg },
   matchedHeader: { alignItems: 'center', paddingTop: spacing.xxl },
   avatar: { width: 96, height: 96, borderRadius: 48 },
