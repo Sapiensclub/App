@@ -40,11 +40,24 @@ const CAP_MAX = 8;
 type Urgency = 'casual' | 'everyday' | 'urgent';
 type Timing = 'now' | 'scheduled';
 
-const URGENCY_LABELS: Record<Urgency, string> = {
-  casual: 'Whenever',
-  everyday: 'Today',
-  urgent: 'Right now',
-};
+// ONE timing question (owner decision, 2026-08): "When do you need help?" —
+// urgency is DERIVED from the answer, never asked separately, so contradictory
+// combos ("Now" + "Whenever") are impossible and it's one less decision.
+//   right_now → timing now,       urgency urgent
+//   today     → timing now,       urgency everyday
+//   pick      → timing scheduled, urgency everyday (≤4h away) / casual (later)
+type WhenMode = 'right_now' | 'today' | 'pick';
+
+const WHEN_OPTIONS: { mode: WhenMode; label: string }[] = [
+  { mode: 'right_now', label: 'Right now' },
+  { mode: 'today', label: 'Today' },
+  { mode: 'pick', label: 'Pick a time' },
+];
+
+function urgencyForSchedule(when: Date): Urgency {
+  const hoursAway = (when.getTime() - Date.now()) / (60 * 60 * 1000);
+  return hoursAway <= 4 ? 'everyday' : 'casual';
+}
 
 function buildSchedulePresets(): { label: string; when: Date }[] {
   const now = new Date();
@@ -80,7 +93,7 @@ export default function NewRequest() {
   const [category, setCategory] = useState<Category | null>(null);
 
   const [description, setDescription] = useState('');
-  const [timing, setTiming] = useState<Timing>('now');
+  const [whenMode, setWhenMode] = useState<WhenMode>('today');
   // Presets are built ONCE per screen so the selected time stays stable
   // (rebuilding each render made the selection never "stick").
   const presets = useMemo(buildSchedulePresets, []);
@@ -89,7 +102,6 @@ export default function NewRequest() {
     () => presets.find((p) => p.label === scheduledLabel)?.when ?? null,
     [presets, scheduledLabel],
   );
-  const [urgency, setUrgency] = useState<Urgency>('everyday');
   const [preferWomen, setPreferWomen] = useState(false);
   const [isGroup, setIsGroup] = useState(false);
   const [cap, setCap] = useState(4);
@@ -109,10 +121,16 @@ export default function NewRequest() {
 
   function pickCategory(c: Category) {
     setCategory(c);
-    // Urgency pre-filled from the category's typical urgency (PRD 10.5);
-    // SOS is never in this control — it maps to "Right now".
-    setUrgency(c.typical_urgency === 'sos' ? 'urgent' : (c.typical_urgency as Urgency));
-    setTiming(c.default_timing === 'scheduled' ? 'scheduled' : 'now');
+    // Pre-fill the single "when" control from the category's nature (PRD 10.5):
+    // scheduled-by-default categories open the time picker; urgent ones say
+    // "Right now"; everything else defaults to the calm middle, "Today".
+    setWhenMode(
+      c.default_timing === 'scheduled'
+        ? 'pick'
+        : c.typical_urgency === 'urgent' || c.typical_urgency === 'sos'
+          ? 'right_now'
+          : 'today',
+    );
     setScheduledLabel(null);
     setIsGroup(c.interaction_type === 'group');
     setCap(4);
@@ -123,10 +141,18 @@ export default function NewRequest() {
 
   async function send() {
     if (!category || !session) return;
-    if (timing === 'scheduled' && !scheduledAt) {
+    if (whenMode === 'pick' && !scheduledAt) {
       Alert.alert('When?', 'Pick a time for your request.');
       return;
     }
+    // Derive what the engine needs from the one answer (see WhenMode above).
+    const timing: Timing = whenMode === 'pick' ? 'scheduled' : 'now';
+    const urgency: Urgency =
+      whenMode === 'right_now'
+        ? 'urgent'
+        : whenMode === 'today'
+          ? 'everyday'
+          : urgencyForSchedule(scheduledAt!);
     setSending(true);
     try {
       const granted = await requestLocationPermission();
@@ -251,17 +277,19 @@ export default function NewRequest() {
 
         <View style={styles.section}>
           <Text variant="label" weight="semibold" tone="secondary">
-            When
+            When do you need help?
           </Text>
           <View style={styles.chipRow}>
-            <Chip label="Now" active={timing === 'now'} onPress={() => setTiming('now')} />
-            <Chip
-              label="Scheduled"
-              active={timing === 'scheduled'}
-              onPress={() => setTiming('scheduled')}
-            />
+            {WHEN_OPTIONS.map((o) => (
+              <Chip
+                key={o.mode}
+                label={o.label}
+                active={whenMode === o.mode}
+                onPress={() => setWhenMode(o.mode)}
+              />
+            ))}
           </View>
-          {timing === 'scheduled' ? (
+          {whenMode === 'pick' ? (
             <View style={styles.chipWrap}>
               {presets.map((p) => (
                 <Chip
@@ -273,22 +301,6 @@ export default function NewRequest() {
               ))}
             </View>
           ) : null}
-        </View>
-
-        <View style={styles.section}>
-          <Text variant="label" weight="semibold" tone="secondary">
-            How soon do you need it?
-          </Text>
-          <View style={styles.chipRow}>
-            {(Object.keys(URGENCY_LABELS) as Urgency[]).map((u) => (
-              <Chip
-                key={u}
-                label={URGENCY_LABELS[u]}
-                active={urgency === u}
-                onPress={() => setUrgency(u)}
-              />
-            ))}
-          </View>
         </View>
 
         {groupAllowed ? (
