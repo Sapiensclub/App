@@ -263,8 +263,8 @@ migration for a given object's current shape.
 
 1. **KYC/SMS/push vendors** — none chosen yet. Which providers, and what's the target date for swapping the stubs?
 2. **Admin hosting** — where will the Next.js dashboard live (Vercel? self-host?), and is anyone building the proxy-based session refresh it still needs?
-3. **`pg_cron` + email-confirm state** — is `pg_cron` currently enabled on the live Supabase project, and is "Confirm email" still OFF (Phase 0 testing setting)?
-4. **EAS project** — has `eas init` been run (is there a `projectId`)? Push tokens stay inert until it is.
+3. ~~`pg_cron`~~ — ✅ RESOLVED (Aug 2026): enabled, both jobs active. "Confirm email" still OFF (correct for the closed test; ON at launch).
+4. ~~EAS project~~ — ✅ RESOLVED (Aug 2026): `eas init` done (projectId in app.json), Android preview build live, push verified end-to-end. Custom SMTP still pending (Supabase built-in mailer can't edit templates → in-app password reset dormant; `scripts/reset-password.mjs` is the interim).
 5. **PostHog key** — added yet, and US or EU region?
 6. **Test-account state** — `context.md` §11 lists specific seed/real accounts; is that still current, or has data been reset since?
 7. **Legal/compliance gate** — the launch-blocking legal items (entity, DPDP, POCSO, IT Rules, DLT, insurance) are owner+lawyer tasks; what's their status?

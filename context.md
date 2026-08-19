@@ -329,7 +329,9 @@ registration. **Owner + lawyer tasks, not code.**
 ## 9. Operational gotchas & how-tos (IMPORTANT)
 
 - **pg_cron must be enabled** for the dispatch tick to run (widen waves, expire requests,
-  lapse, auto-confirm). Enable: Supabase Dashboard → Database → Extensions → `pg_cron`
+  lapse, auto-confirm). ✅ VERIFIED live (Aug 2026): both jobs scheduled + active
+  (`sapiens-dispatch-tick` every minute, `sapiens-retention-sweep` daily 03:17).
+  Enable: Supabase Dashboard → Database → Extensions → `pg_cron`
   ON, then SQL editor:
   `select cron.schedule('sapiens-dispatch-tick', '* * * * *', 'select public.dispatch_tick();');`
   Without it: requests never expire → stuck "open" shown as "expired" in UI; no later
