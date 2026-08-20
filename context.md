@@ -302,6 +302,18 @@ Phase 8/launch. Dashboard is localhost-run for now.
   expose `is_online` (appended, or-replace). Push ping copy says "online — you
   can help from anywhere" (function redeploy needed). Migration
   20260820100000.
+- **Reconnect after disconnect ✅ (2026-08-20)** — a help completed AFTER the
+  disconnect re-opens the connect offer as a FRESH double opt-in; on
+  re-acceptance the old inbox thread un-freezes (history intact) + the new
+  help's messages carry in. Declined pairs also get a fresh offer on a NEW help
+  (stale acceptance flags reset). Blocks remain permanent. Migration
+  20260820140000 (connect_offer v3).
+- **Quiet hours tz bug ✅ (2026-08-20)** — in_quiet_hours compared UTC hours,
+  silencing IST helpers 03:30–11:30 local (found live: iPhone helper invisible
+  at 11am). Now tz-aware ('tz' minutes key in quiet_hours jsonb, client saves
+  it, existing rows backfilled 330/IST). Migration 20260820120000.
+- **Help-someone list fix ✅** — loads instantly (was blocked on slow Android
+  GPS), refreshes on focus (was mount-once), loading spinner.
 - JS-only fixes reach installed testers via `eas update --channel preview`.
 
 **P1 features still owed (not launch blockers):** leaderboard area filters (need
