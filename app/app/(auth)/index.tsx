@@ -90,8 +90,9 @@ export default function SignIn() {
   }
 
   async function onResetPassword() {
-    if (code.trim().length !== 6) {
-      Alert.alert('Check the code', 'Enter the 6-digit code from the email.');
+    // Supabase's OTP length is a project setting (6–10 digits) — accept any.
+    if (code.trim().length < 6) {
+      Alert.alert('Check the code', 'Enter the full code from the email.');
       return;
     }
     if (password.length < MIN_PASSWORD) {
@@ -148,13 +149,13 @@ export default function SignIn() {
 
             {mode === 'forgot' ? (
               <Text variant="body" tone="secondary">
-                We&apos;ll email you a 6-digit code so you can set a new password.
+                We&apos;ll email you a code so you can set a new password.
               </Text>
             ) : null}
             {mode === 'reset' ? (
               <Text variant="body" tone="secondary">
-                We emailed a 6-digit code to {email.trim() || 'your address'}.
-                Enter it below with your new password.
+                We emailed a code to {email.trim() || 'your address'}. Enter it
+                below with your new password.
               </Text>
             ) : null}
 
@@ -181,11 +182,11 @@ export default function SignIn() {
                   styles.input,
                   { backgroundColor: colors.inputBg, borderColor: colors.inputBorder, color: colors.textPrimary },
                 ]}
-                placeholder="6-digit code"
+                placeholder="Code from the email"
                 placeholderTextColor={colors.textFaint}
                 keyboardType="number-pad"
                 textContentType="oneTimeCode"
-                maxLength={6}
+                maxLength={10}
                 value={code}
                 onChangeText={setCode}
                 editable={!busy}

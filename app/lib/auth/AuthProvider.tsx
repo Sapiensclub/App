@@ -24,8 +24,9 @@ type AuthContextValue = {
   /** Sign in with email + password. */
   signInWithPassword: (email: string, password: string) => Promise<void>;
   /**
-   * Email a 6-digit recovery code. Requires the Supabase "Reset password"
-   * email template to include {{ .Token }} (see docs/PRELAUNCH_CHECKLIST.md).
+   * Email a recovery code (length = the project's Email OTP setting, 6–10).
+   * Requires the Supabase "Reset password" email template to include
+   * {{ .Token }} (see docs/PRELAUNCH_CHECKLIST.md).
    */
   requestPasswordReset: (email: string) => Promise<void>;
   /** Verify the emailed code + set the new password. Signs the user in. */
