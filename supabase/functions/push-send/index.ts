@@ -62,7 +62,7 @@ async function resolvePing(id: string): Promise<Outgoing | null> {
 
   const { data: r } = await supabase
     .from('requests')
-    .select('id, seeker_id, category_id, is_directed, directed_to, status')
+    .select('id, seeker_id, category_id, is_directed, directed_to, status, is_online')
     .eq('id', dt.request_id)
     .maybeSingle();
   if (!r || r.status !== 'open') return null; // stale by the time we run
@@ -90,6 +90,14 @@ async function resolvePing(id: string): Promise<Outgoing | null> {
   }
 
   // Open ping: category only — never who or exactly where.
+  if (r.is_online) {
+    return {
+      recipients: [dt.helper_id],
+      title: 'Someone needs a hand — online',
+      body: `${label} — you can help from anywhere. Open Sapiens if you're free.`,
+      url: `/help/${r.id}`,
+    };
+  }
   return {
     recipients: [dt.helper_id],
     title: 'Someone nearby needs a hand',

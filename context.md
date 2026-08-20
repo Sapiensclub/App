@@ -287,9 +287,21 @@ Phase 8/launch. Dashboard is localhost-run for now.
   show: verified badge, celestial stage, trust stars, distance, the helper's
   bio, "N neighbours helped" (unique_helps) + member since
   (migration 20260819100000, DROP+CREATE per the view rule).
-- **Online-help mode** — designed (3 chunks: online request + radius-free
-  dispatch; Start→Done flow + link-sharing in chat; helper opt-in toggle);
-  owner deferred — revisit after the test window.
+- **Online help ✅ (2026-08-20, owner-directed design)** — SEEKER chooses per
+  request ("In person, or online?" — every category, no category gating);
+  online = `requests.is_online`, NO meetpoint/location/permission, pings ALL
+  eligible category helpers (owner decision; `dispatch_config
+  'online_wave_size'` row caps it later — no row = unlimited). New
+  `dispatch_online()` (no GPS requirement — helpers without location sync get
+  pinged); `dispatch_wave` branches to it; `dispatch_tick` lapse sweep EXEMPTS
+  online matches (sessions can start hours later). Meet flow: helper
+  `helper_start_online` (reuses status 'arrived' = session started, no enum
+  change) → mark done → seeker confirm; meetup code = "session code" read out
+  on the call; call links shared in chat (online chats carry a
+  never-share-OTP/bank-details safety line). `helper_pings` + `match_details`
+  expose `is_online` (appended, or-replace). Push ping copy says "online — you
+  can help from anywhere" (function redeploy needed). Migration
+  20260820100000.
 - JS-only fixes reach installed testers via `eas update --channel preview`.
 
 **P1 features still owed (not launch blockers):** leaderboard area filters (need

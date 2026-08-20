@@ -198,8 +198,9 @@ export default function Chat() {
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             ListHeaderComponent={
               <Text variant="small" tone="faint" center style={styles.intro}>
-                This chat is just for coordinating your meet-up. It closes when
-                the help is done.
+                {match?.is_online
+                  ? 'Coordinate your call here — share a Zoom, Meet or WhatsApp link. Never share OTPs, passwords or bank details. This chat closes when the help is done.'
+                  : 'This chat is just for coordinating your meet-up. It closes when the help is done.'}
               </Text>
             }
             renderItem={({ item }) => {

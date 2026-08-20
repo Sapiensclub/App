@@ -37,6 +37,7 @@ type RequestRow = {
   is_directed: boolean;
   directed_to: string | null;
   opened_at: string | null;
+  is_online: boolean;
 };
 
 export default function RequestWaiting() {
@@ -58,7 +59,7 @@ export default function RequestWaiting() {
     const { data: reqRow } = await supabase
       .from('requests')
       .select(
-        'id, status, timing, urgency, description, approx_area, expires_at, category_id, interaction_type, participant_cap, is_directed, directed_to, opened_at',
+        'id, status, timing, urgency, description, approx_area, expires_at, category_id, interaction_type, participant_cap, is_directed, directed_to, opened_at, is_online',
       )
       .eq('id', id)
       .single();
@@ -393,15 +394,19 @@ export default function RequestWaiting() {
     const awaitingConfirm = !!match.helper_done_at;
     const headline = awaitingConfirm
       ? `Did ${match.other_name ?? 'your helper'} help you?`
-      : match.status === 'arrived'
-        ? `${match.other_name ?? 'Your helper'} has arrived`
-        : match.status === 'on_the_way'
-          ? `${match.other_name ?? 'Your helper'} is on the way`
-          : `${match.other_name ?? 'Your helper'} is coming`;
+      : match.is_online
+        ? match.status === 'arrived'
+          ? `${match.other_name ?? 'Your helper'} started your session`
+          : `${match.other_name ?? 'Your helper'} will help you online`
+        : match.status === 'arrived'
+          ? `${match.other_name ?? 'Your helper'} has arrived`
+          : match.status === 'on_the_way'
+            ? `${match.other_name ?? 'Your helper'} is on the way`
+            : `${match.other_name ?? 'Your helper'} is coming`;
 
     const dist = match.helper_distance_m;
     const etaLine =
-      !awaitingConfirm && match.status === 'on_the_way' && dist != null
+      !awaitingConfirm && !match.is_online && match.status === 'on_the_way' && dist != null
         ? `About ${distanceLabel(dist)} away · ~${walkingEtaMinutes(dist)} min`
         : null;
 
@@ -434,13 +439,15 @@ export default function RequestWaiting() {
 
         <Card style={styles.meetCard}>
           <Text variant="small" tone="secondary">
-            Meetup code
+            {match.is_online ? 'Session code' : 'Meetup code'}
           </Text>
           <Text variant="display" celebrate style={styles.code}>
             {match.meetup_code}
           </Text>
           <Text variant="small" tone="faint">
-            Ask for this code when they arrive, to confirm it&apos;s the right person.
+            {match.is_online
+              ? 'Ask for this code on your call, to confirm it’s the right person. Agree on the call link in chat.'
+              : 'Ask for this code when they arrive, to confirm it’s the right person.'}
           </Text>
         </Card>
 
@@ -579,14 +586,19 @@ export default function RequestWaiting() {
           ) : status === 'open' ? (
             <>
               <View style={[styles.bigIcon, { backgroundColor: colors.accentSoft }]}>
-                <Ionicons name="radio-outline" size={44} color={colors.accent} />
+                <Ionicons
+                  name={request.is_online ? 'globe-outline' : 'radio-outline'}
+                  size={44}
+                  color={colors.accent}
+                />
               </View>
               <Text variant="title" center>
-                Finding someone nearby…
+                {request.is_online ? 'Finding someone online…' : 'Finding someone nearby…'}
               </Text>
               <Text variant="body" tone="secondary" center style={styles.copy}>
-                Nearby verified helpers are being notified, closest first. Hang
-                tight — we&apos;ll tell you the moment someone raises a hand.
+                {request.is_online
+                  ? 'Verified helpers who signed up for this are being notified — near or far. We’ll tell you the moment someone raises a hand.'
+                  : 'Nearby verified helpers are being notified, closest first. Hang tight — we’ll tell you the moment someone raises a hand.'}
               </Text>
             </>
           ) : null}

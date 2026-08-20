@@ -157,10 +157,11 @@ export default function HelpNow() {
                   </Text>
                 ) : null}
                 <View style={styles.metaRow}>
-                  {p.approx_distance_m != null ? (
+                  {p.is_online ? <Meta icon="globe-outline" text="Online" /> : null}
+                  {!p.is_online && p.approx_distance_m != null ? (
                     <Meta icon="location-outline" text={distanceLabel(p.approx_distance_m)} />
                   ) : null}
-                  {p.approx_area ? <Meta icon="map-outline" text={p.approx_area} /> : null}
+                  {!p.is_online && p.approx_area ? <Meta icon="map-outline" text={p.approx_area} /> : null}
                   <Meta icon="time-outline" text={timeAgo(p.pinged_at)} />
                 </View>
               </View>

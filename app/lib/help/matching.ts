@@ -27,6 +27,8 @@ export type HelperPing = {
   directed_to_me: boolean;
   from_name: string | null;
   from_photo: string | null;
+  /** Online help: no meetpoint, no radius — coordinate over a call (2026-08). */
+  is_online: boolean;
 };
 
 export type Candidate = {
@@ -72,6 +74,7 @@ export type MatchDetails = {
   other_stage: string;
   other_trust: number | null;
   helper_distance_m: number | null;
+  is_online: boolean;
 };
 
 /** A verified, pinged helper offers to help. */
@@ -147,6 +150,12 @@ export async function groupEnd(requestId: string): Promise<void> {
 /** Reopen a dead/expired request and re-broadcast (PRD 3.10). */
 export async function retryRequest(requestId: string): Promise<void> {
   const { error } = await supabase.rpc('retry_request', { p_request_id: requestId });
+  if (error) throw error;
+}
+
+/** Online help: helper starts the session (replaces on-my-way/arrived). */
+export async function helperStartOnline(matchId: string): Promise<void> {
+  const { error } = await supabase.rpc('helper_start_online', { p_match_id: matchId });
   if (error) throw error;
 }
 

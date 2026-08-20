@@ -93,6 +93,9 @@ export default function NewRequest() {
   const [category, setCategory] = useState<Category | null>(null);
 
   const [description, setDescription] = useState('');
+  // Seeker's choice per request (owner decision): any category can be helped
+  // online — no meetpoint, no radius; every opted-in helper gets pinged.
+  const [isOnline, setIsOnline] = useState(false);
   const [whenMode, setWhenMode] = useState<WhenMode>('today');
   // Presets are built ONCE per screen so the selected time stays stable
   // (rebuilding each render made the selection never "stick").
@@ -132,6 +135,7 @@ export default function NewRequest() {
           : 'today',
     );
     setScheduledLabel(null);
+    setIsOnline(false);
     setIsGroup(c.interaction_type === 'group');
     setCap(4);
   }
@@ -155,16 +159,21 @@ export default function NewRequest() {
           : urgencyForSchedule(scheduledAt!);
     setSending(true);
     try {
-      const granted = await requestLocationPermission();
-      if (!granted) {
-        Alert.alert(
-          'Location needed',
-          'Sapiens needs your location to find helpers near you. Allow location access in Settings.',
-        );
-        return;
+      // Online help needs no location at all — no permission, no meetpoint.
+      let coords: { lat: number; lng: number } | null = null;
+      let locality: string | null = null;
+      if (!isOnline) {
+        const granted = await requestLocationPermission();
+        if (!granted) {
+          Alert.alert(
+            'Location needed',
+            'Sapiens needs your location to find helpers near you. Allow location access in Settings.',
+          );
+          return;
+        }
+        coords = await getCurrentCoords();
+        locality = await reverseGeocodeLocality(coords);
       }
-      const coords = await getCurrentCoords();
-      const locality = await reverseGeocodeLocality(coords);
 
       const { data, error } = await supabase
         .from('requests')
@@ -175,8 +184,9 @@ export default function NewRequest() {
           timing,
           scheduled_at: timing === 'scheduled' ? scheduledAt!.toISOString() : null,
           urgency,
-          meetpoint_lat: coords.lat,
-          meetpoint_lng: coords.lng,
+          is_online: isOnline,
+          meetpoint_lat: coords?.lat ?? null,
+          meetpoint_lng: coords?.lng ?? null,
           approx_area: locality,
           prefer_women: preferWomen,
           // A directed ask is always one-to-one (you're asking one person).
@@ -193,6 +203,7 @@ export default function NewRequest() {
         category: category.label,
         urgency,
         timing,
+        online: isOnline,
         group: !isDirected && groupAllowed && isGroup,
         directed: isDirected,
       });
@@ -274,6 +285,22 @@ export default function NewRequest() {
           style={styles.descInput}
           editable={!sending}
         />
+
+        <View style={styles.section}>
+          <Text variant="label" weight="semibold" tone="secondary">
+            In person, or online?
+          </Text>
+          <View style={styles.chipRow}>
+            <Chip label="In person" active={!isOnline} onPress={() => setIsOnline(false)} />
+            <Chip label="Online" active={isOnline} onPress={() => setIsOnline(true)} />
+          </View>
+          {isOnline ? (
+            <Text variant="small" tone="faint">
+              Online help happens over a call or chat — helpers from anywhere can
+              raise a hand, not just nearby.
+            </Text>
+          ) : null}
+        </View>
 
         <View style={styles.section}>
           <Text variant="label" weight="semibold" tone="secondary">
@@ -371,7 +398,9 @@ export default function NewRequest() {
           <Text variant="small" tone="faint" center>
             {isDirected
               ? `${directedName || 'They'} will be asked first. If they're not around, your request opens to others nearby. They see your exact location only once they accept.`
-              : 'Nearby verified helpers will be notified. They see your request and area — never your exact location until you confirm someone.'}
+              : isOnline
+                ? 'Verified helpers who signed up for this will be notified — near or far. Your location is never involved; you coordinate in chat.'
+                : 'Nearby verified helpers will be notified. They see your request and area — never your exact location until you confirm someone.'}
           </Text>
         </View>
       </View>

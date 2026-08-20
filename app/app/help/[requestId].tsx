@@ -11,6 +11,7 @@ import {
   helperArrived,
   helperMarkDone,
   helperOnMyWay,
+  helperStartOnline,
   loadMatchForRequest,
   raiseHand,
   withdrawHand,
@@ -179,28 +180,35 @@ export default function HelperRequest() {
 
         <Card style={styles.meetCard}>
           <Text variant="small" tone="secondary">
-            Meetup code
+            {match.is_online ? 'Session code' : 'Meetup code'}
           </Text>
           <Text variant="display" celebrate style={styles.code}>
             {match.meetup_code}
           </Text>
           <Text variant="small" tone="faint">
-            Share this only when you meet, to confirm you found the right person.
+            {match.is_online
+              ? 'Read this out on your call, to confirm you found the right person.'
+              : 'Share this only when you meet, to confirm you found the right person.'}
           </Text>
         </Card>
 
         <Card style={styles.detailCard}>
           <DetailRow icon="pricetag-outline" text={match.category_label} />
+          {match.is_online ? <DetailRow icon="globe-outline" text="Online — coordinate the call in chat" /> : null}
           {match.description ? <DetailRow icon="chatbox-ellipses-outline" text={match.description} /> : null}
-          {match.approx_area ? <DetailRow icon="map-outline" text={match.approx_area} /> : null}
+          {!match.is_online && match.approx_area ? <DetailRow icon="map-outline" text={match.approx_area} /> : null}
         </Card>
 
         <View style={styles.navWrap}>
-          {/* Solo help has a status ladder; a group activity does not. */}
-          {!isGroup && match.status === 'confirmed' ? (
+          {/* Solo help has a status ladder; a group activity does not.
+              Online skips travel: Start helping → Mark as done. */}
+          {!isGroup && match.is_online && match.status === 'confirmed' ? (
+            <Button label="Start helping" onPress={() => runStep(helperStartOnline)} busy={busy} />
+          ) : null}
+          {!isGroup && !match.is_online && match.status === 'confirmed' ? (
             <Button label="I'm on my way" onPress={() => runStep(helperOnMyWay)} busy={busy} />
           ) : null}
-          {!isGroup && match.status === 'on_the_way' ? (
+          {!isGroup && !match.is_online && match.status === 'on_the_way' ? (
             <Button label="I've arrived" onPress={() => runStep(helperArrived)} busy={busy} />
           ) : null}
           {!isGroup && match.status === 'arrived' && !match.helper_done_at ? (
@@ -354,17 +362,22 @@ export default function HelperRequest() {
 
       <Card style={styles.detailCard}>
         <DetailRow icon="pricetag-outline" text={ping?.category_label ?? ''} />
+        {ping?.is_online ? <DetailRow icon="globe-outline" text="Online — help over a call or chat" /> : null}
         {ping?.description ? <DetailRow icon="chatbox-ellipses-outline" text={ping.description} /> : null}
-        {ping?.approx_distance_m != null ? (
+        {!ping?.is_online && ping?.approx_distance_m != null ? (
           <DetailRow icon="location-outline" text={`About ${distanceLabel(ping.approx_distance_m)} away`} />
         ) : null}
-        {ping?.approx_area ? <DetailRow icon="map-outline" text={`Near ${ping.approx_area}`} /> : null}
+        {!ping?.is_online && ping?.approx_area ? (
+          <DetailRow icon="map-outline" text={`Near ${ping.approx_area}`} />
+        ) : null}
       </Card>
 
       <Text variant="small" tone="faint" center style={styles.privacyNote}>
         {directed
           ? `${ping?.from_name ?? 'They'} asked you directly. Raise your hand to help — you'll get their exact location once they confirm.`
-          : "You'll see their name and exact location only if they confirm you."}
+          : ping?.is_online
+            ? "You'll see their name only if they confirm you. You coordinate the call in chat — no locations involved."
+            : "You'll see their name and exact location only if they confirm you."}
       </Text>
 
       {state === 'raised' ? (
