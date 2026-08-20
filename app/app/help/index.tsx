@@ -1,7 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { EmptyState, Screen, Text } from '@/components/ui';
 import { useAuth } from '@/lib/auth/AuthProvider';
@@ -54,9 +61,11 @@ export default function HelpNow() {
     setLoading(false);
   }, []);
 
-  // Make sure we're findable: request location once and sync it, then load.
+  // Show what's already there IMMEDIATELY — GPS can take many seconds on
+  // Android, and the list must never wait for it (it looked broken before).
+  // Location sync runs in parallel, best-effort, to keep us findable.
   useEffect(() => {
-    let alive = true;
+    load();
     (async () => {
       try {
         const granted = await requestLocationPermission();
@@ -67,12 +76,16 @@ export default function HelpNow() {
       } catch {
         // best-effort
       }
-      if (alive) load();
     })();
-    return () => {
-      alive = false;
-    };
   }, [load]);
+
+  // Refresh whenever the screen regains focus (it used to load only on mount,
+  // so pings that arrived while you were elsewhere never appeared).
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   // Live: new pings for me arrive → refresh.
   useRealtime(
@@ -93,7 +106,11 @@ export default function HelpNow() {
         <View style={{ width: 26 }} />
       </View>
 
-      {pings.length === 0 ? (
+      {loading && pings.length === 0 ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.accent} />
+        </View>
+      ) : pings.length === 0 ? (
         <EmptyState
           icon="heart-outline"
           title="No one needs help nearby right now"
@@ -198,6 +215,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   topTitle: { flex: 1, textAlign: 'center' },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.md },
   card: {
     flexDirection: 'row',
