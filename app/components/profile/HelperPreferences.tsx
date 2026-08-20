@@ -21,7 +21,14 @@ import { radius as radii, spacing } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 type Category = { id: string; slug: string; label: string; icon: string | null };
-type QuietHours = { enabled: boolean; start: number; end: number };
+type QuietHours = {
+  enabled: boolean;
+  start: number;
+  end: number;
+  /** Minutes east of UTC (IST = 330) — lets the server check quiet hours in
+   *  the member's LOCAL time, not server UTC. */
+  tz?: number;
+};
 
 const RADIUS_MIN = 1000;
 const RADIUS_MAX = 10000;
@@ -105,7 +112,8 @@ export function HelperPreferences({ visible, onClose }: Props) {
         .update({
           categories: Array.from(selected),
           radius_max_m: radiusM,
-          quiet_hours: quiet,
+          // JS getTimezoneOffset is minutes WEST of UTC → negate (IST = 330).
+          quiet_hours: { ...quiet, tz: -new Date().getTimezoneOffset() },
         })
         .eq('user_id', uid);
       if (error) throw error;
