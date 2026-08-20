@@ -300,8 +300,18 @@ function underline(color: string) {
 }
 
 function messageOf(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  return 'Something went wrong. Please try again.';
+  // Short, human auth messages pass through ("Invalid login credentials",
+  // "For security purposes, you can only request this after 60 seconds").
+  // Server hiccups arrive as raw response dumps — never show those to a person.
+  if (
+    e instanceof Error &&
+    e.message &&
+    e.message.length <= 160 &&
+    !e.message.trim().startsWith('{')
+  ) {
+    return e.message;
+  }
+  return 'Something went wrong on our side. Please try again in a minute.';
 }
 
 const styles = StyleSheet.create({
