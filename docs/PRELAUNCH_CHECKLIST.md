@@ -79,6 +79,14 @@ These are **not code** and must be in place before real users:
 - [ ] Legal entity + Terms of Service + Privacy Policy.
 - [ ] **DPDP Act** (India data protection) compliance; data-processing records.
 - [ ] **POCSO** + child-safety posture (the `over_18` gate exists; policy/process needed).
+- [ ] **AGE POLICY DECISION (PRD 2.3 + G4)** — decide with counsel BEFORE launch:
+      (A) launch **18+ only** — under-18 KYC result → verification refused; simplest
+      POCSO/DPDP posture (recommended for v1), or (B) build PRD 2.3 **child mode**
+      (group-only, no 1:1 with unknown adults) — NOTE: KYC-ing a minor = processing
+      a child's identity data → DPDP requires a verifiable parental-consent flow
+      (its own build). Plumbing ready either way: the KYC seam already carries
+      `over_18` end-to-end; NOTHING enforces it yet — enforcement ships with the
+      real KYC integration.
 - [ ] **IT Rules 2021** intermediary obligations (grievance officer, takedown SLAs) —
       the reports/admin flow supports this operationally.
 - [ ] Liability & insurance for in-person help; incident-response plan for SOS.
