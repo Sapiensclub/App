@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import '@/lib/webAlert'; // web: make Alert speak through browser dialogs
+
 import { track } from '@/lib/analytics';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthProvider';
 import { ProfileProvider, useProfile } from '@/lib/profile/ProfileProvider';
