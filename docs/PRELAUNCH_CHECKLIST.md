@@ -13,9 +13,17 @@ lawyer tasks. Nothing here should be skipped for a public launch.
       Verify with the query at the bottom of that file.
 - [ ] **Do not deploy `app/scripts/*`** — the harnesses/seeders use the service key.
       They live only in the repo for local dev.
-- [ ] **Turn Supabase "Confirm email" back ON** (Auth → Providers → Email). It was
-      OFF only for Phase 0 testing. Consider switching auth to phone-OTP for launch
-      (the seam is `app/lib/auth/phoneOtp.ts`).
+- [ ] **Make email confirmation actually WORK before launch** (it is ON as of
+      Sep 2026; closed-test signups are created pre-confirmed via
+      `app/scripts/create-tester.mjs` instead). For self-serve signup to work:
+      (1) Auth → URL Configuration → set **Site URL** to the hosted web app
+      (default localhost:3000 breaks every confirmation link) + add redirect
+      allowlist entries; (2) verify the **Confirm signup** template sends and
+      lands (check Resend Emails log + spam; only the Reset template was
+      customized) — or switch it to a {{ .Token }} code + in-app entry, same
+      pattern as password reset; (3) Auth → Rate Limits → raise emails/hour
+      (custom-SMTP default 30/h is too low for launch); (4) consider phone-OTP
+      instead (the seam is `app/lib/auth/phoneOtp.ts`).
 - [ ] **Custom SMTP for auth emails** (Auth → SMTP) — REQUIRED, not optional
       (learned 2026-08-10): Supabase's built-in mailer no longer allows editing
       email templates at all, so the in-app password-reset flow (needs the
